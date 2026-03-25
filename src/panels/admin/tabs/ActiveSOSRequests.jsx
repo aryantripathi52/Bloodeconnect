@@ -4,11 +4,11 @@ import {
   ChevronRight, ArrowRight, ShieldAlert,
   Search, Filter, Map as MapIcon, Layers
 } from 'lucide-react';
-import { clsx, type ClassValue } from 'clsx';
+import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import MapView from '../../../components/shared/MapView';
 
-function cn(...inputs: ClassValue[]) {
+function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 

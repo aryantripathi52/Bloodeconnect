@@ -9,10 +9,10 @@ import {
   BookOpen, ShieldAlert, Package, Truck, AlertTriangle, 
   Timer, Map as MapIcon, TrendingUp, Download, Building2 
 } from 'lucide-react';
-import { clsx, type ClassValue } from 'clsx';
+import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-function cn(...inputs: ClassValue[]) {
+function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 

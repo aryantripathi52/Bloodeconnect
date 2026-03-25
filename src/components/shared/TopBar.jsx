@@ -2,10 +2,10 @@ import React from 'react';
 import { Bell, Search, ChevronDown, User } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { useLocation } from 'react-router-dom';
-import { clsx, type ClassValue } from 'clsx';
+import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-function cn(...inputs: ClassValue[]) {
+function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
