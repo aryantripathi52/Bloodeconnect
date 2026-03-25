@@ -3,2532 +3,2090 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BloodConnect — Command Dashboard</title>
+<title>BloodConnect — Save Lives Together</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
+/* ═══════════════════════════════════════════
+   ROOT & RESET
+═══════════════════════════════════════════ */
 :root {
-  --bg: #0a0a0f;
-  --surface: #111118;
-  --surface2: #16161f;
-  --surface3: #1c1c28;
+  --bg: #06060a;
+  --bg2: #0d0d14;
+  --surface: #111119;
+  --surface2: #17171f;
+  --surface3: #1e1e28;
   --border: rgba(255,255,255,0.06);
   --border2: rgba(255,255,255,0.1);
-  --text: #e8e8f0;
-  --text2: #9090a8;
-  --text3: #5a5a70;
-  --red: #e03535;
-  --red-dim: rgba(224,53,53,0.15);
-  --red-glow: 0 0 20px rgba(224,53,53,0.3);
-  --admin: #c0392b;
-  --hospital: #2563eb;
-  --donor: #0d9488;
-  --patient: #7c3aed;
-  --ngo: #b45309;
-  --bank: #15803d;
-  --sidebar-w: 220px;
-  --topbar-h: 60px;
-  --radius: 12px;
-  --radius-sm: 8px;
+  --text: #eeeef5;
+  --text2: #8888a8;
+  --text3: #55556a;
+  --red: #e8383838;
+  --red2: #e03535;
+  --red-glow: rgba(224,53,53,0.35);
+  --admin-c: #dc2626;
+  --hosp-c: #2563eb;
+  --user-c: #0d9488;
+  --r: 14px;
+  --r-sm: 9px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{
+  font-family:'DM Sans',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:4px;}
+
+/* ═══════════════════════════════════════════
+   SCREENS
+═══════════════════════════════════════════ */
+.screen{display:none;min-height:100vh;}
+.screen.active{display:flex;flex-direction:column;}
+
+/* ═══════════════════════════════════════════
+   NOISE OVERLAY
+═══════════════════════════════════════════ */
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:9999;opacity:0.4;
 }
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-body {
-  font-family: 'DM Sans', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  overflow-x: hidden;
+/* ═══════════════════════════════════════════
+   LANDING PAGE
+═══════════════════════════════════════════ */
+#screen-landing{
+  align-items:center;
+  justify-content:center;
+  position:relative;
+  overflow:hidden;
 }
 
-/* Grid background */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
+/* Animated blood drop background */
+.bg-orb{
+  position:absolute;
+  border-radius:50%;
+  filter:blur(120px);
+  pointer-events:none;
+  animation:orb-drift 12s ease-in-out infinite alternate;
+}
+.orb1{width:600px;height:600px;background:radial-gradient(circle,rgba(220,38,38,0.12),transparent 70%);top:-100px;left:-150px;}
+.orb2{width:500px;height:500px;background:radial-gradient(circle,rgba(37,99,235,0.08),transparent 70%);bottom:-100px;right:-100px;animation-delay:-6s;}
+.orb3{width:400px;height:400px;background:radial-gradient(circle,rgba(13,148,136,0.07),transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);animation-duration:16s;}
+@keyframes orb-drift{
+  from{transform:translate(0,0) scale(1);}
+  to{transform:translate(40px,30px) scale(1.1);}
+}
+
+/* Grid lines */
+#screen-landing::before{
+  content:'';position:absolute;inset:0;
   background-image:
-    linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
-  background-size: 40px 40px;
-  pointer-events: none;
-  z-index: 0;
+    linear-gradient(rgba(255,255,255,0.018) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,0.018) 1px,transparent 1px);
+  background-size:50px 50px;
 }
 
-/* ─── SIDEBAR ─── */
-#sidebar {
-  position: fixed;
-  top: 0; left: 0; bottom: 0;
-  width: var(--sidebar-w);
-  background: var(--surface);
-  border-right: 1px solid var(--border);
-  z-index: 100;
-  display: flex;
-  flex-direction: column;
-  padding: 0;
-  overflow: hidden;
+.landing-inner{
+  position:relative;z-index:1;
+  text-align:center;
+  padding:60px 24px;
+  max-width:1000px;
+  width:100%;
+  animation:land-in 0.9s cubic-bezier(0.16,1,0.3,1) both;
+}
+@keyframes land-in{
+  from{opacity:0;transform:translateY(30px);}
+  to{opacity:1;transform:translateY(0);}
 }
 
-.sidebar-logo {
-  padding: 20px 18px 16px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.landing-eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(224,53,53,0.08);
+  border:1px solid rgba(224,53,53,0.2);
+  border-radius:50px;
+  padding:6px 16px;
+  font-size:12px;font-weight:600;
+  letter-spacing:1.5px;text-transform:uppercase;
+  color:#f87171;
+  margin-bottom:28px;
+  animation:land-in 0.9s 0.1s both;
 }
-.sidebar-logo .logo-icon {
-  font-size: 22px;
-  filter: drop-shadow(0 0 8px rgba(224,53,53,0.6));
+.eyebrow-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:#f87171;
+  animation:pulse-red 1.5s infinite;
 }
-.sidebar-logo .logo-text {
-  font-family: 'Syne', sans-serif;
-  font-weight: 800;
-  font-size: 16px;
-  letter-spacing: -0.3px;
-}
-.sidebar-logo .logo-text span { color: var(--red); }
-
-.sidebar-nav { flex: 1; overflow-y: auto; padding: 12px 0; }
-.nav-section-label {
-  padding: 10px 18px 5px;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 1.5px;
-  color: var(--text3);
-  text-transform: uppercase;
-}
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 18px;
-  cursor: pointer;
-  transition: all 0.2s;
-  border-left: 3px solid transparent;
-  position: relative;
-}
-.nav-item:hover { background: rgba(255,255,255,0.04); }
-.nav-item.active {
-  border-left-color: var(--red);
-  background: var(--red-dim);
-}
-.nav-badge {
-  width: 26px; height: 26px;
-  border-radius: 7px;
-  display: flex; align-items: center; justify-content: center;
-  font-family: 'Syne', sans-serif;
-  font-weight: 800;
-  font-size: 12px;
-  flex-shrink: 0;
-}
-.nav-label { font-size: 13px; font-weight: 500; }
-
-.sidebar-bottom {
-  padding: 14px 18px;
-  border-top: 1px solid var(--border);
-  font-size: 11px;
-  color: var(--text3);
+@keyframes pulse-red{
+  0%,100%{opacity:1;transform:scale(1);}
+  50%{opacity:0.5;transform:scale(1.4);}
 }
 
-/* ─── TOPBAR ─── */
-#topbar {
-  position: fixed;
-  top: 0;
-  left: var(--sidebar-w);
-  right: 0;
-  height: var(--topbar-h);
-  background: rgba(10,10,15,0.85);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
-  z-index: 90;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 24px;
+.landing-logo{
+  display:flex;align-items:center;justify-content:center;gap:16px;
+  margin-bottom:20px;
 }
-.topbar-title {
-  font-family: 'Syne', sans-serif;
-  font-weight: 700;
-  font-size: 16px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.logo-drop{
+  font-size:52px;
+  filter:drop-shadow(0 0 20px rgba(224,53,53,0.7));
+  animation:drop-pulse 3s ease-in-out infinite;
 }
-.panel-color-dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
+@keyframes drop-pulse{
+  0%,100%{filter:drop-shadow(0 0 20px rgba(224,53,53,0.7));}
+  50%{filter:drop-shadow(0 0 40px rgba(224,53,53,0.9));}
 }
-.topbar-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.landing-title{
+  font-family:'Syne',sans-serif;
+  font-weight:800;
+  font-size:clamp(48px,8vw,88px);
+  line-height:0.95;
+  letter-spacing:-3px;
+  background:linear-gradient(135deg,#ffffff 0%,#ffcccc 50%,#e03535 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
 }
-.live-badge {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  font-weight: 600;
-  color: #22c55e;
-  background: rgba(34,197,94,0.1);
-  border: 1px solid rgba(34,197,94,0.2);
-  border-radius: 20px;
-  padding: 3px 9px;
-}
-.live-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: #22c55e;
-  animation: pulse-green 1.5s infinite;
-}
-@keyframes pulse-green {
-  0%,100% { opacity:1; transform: scale(1); }
-  50% { opacity:0.5; transform: scale(1.3); }
-}
-.demo-badge {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--ngo);
-  background: rgba(180,83,9,0.12);
-  border: 1px solid rgba(180,83,9,0.25);
-  border-radius: 20px;
-  padding: 3px 9px;
-}
-.sos-btn {
-  background: var(--red);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 7px 14px;
-  font-family: 'Syne', sans-serif;
-  font-weight: 700;
-  font-size: 12px;
-  cursor: pointer;
-  letter-spacing: 0.5px;
-  box-shadow: var(--red-glow);
-  animation: sos-pulse 2s infinite;
-  transition: transform 0.15s;
-}
-.sos-btn:hover { transform: scale(1.05); }
-@keyframes sos-pulse {
-  0%,100% { box-shadow: 0 0 10px rgba(224,53,53,0.4); }
-  50% { box-shadow: 0 0 25px rgba(224,53,53,0.7); }
-}
-.avatar {
-  width: 34px; height: 34px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--red), #7c3aed);
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 700; font-size: 13px;
-  cursor: pointer;
+.landing-subtitle{
+  font-size:clamp(16px,2.5vw,20px);
+  color:var(--text2);
+  max-width:560px;
+  margin:22px auto 0;
+  line-height:1.65;
+  font-weight:400;
+  animation:land-in 0.9s 0.2s both;
 }
 
-/* ─── MAIN CONTENT ─── */
-#main {
-  margin-left: var(--sidebar-w);
-  margin-top: var(--topbar-h);
-  padding: 24px;
-  position: relative;
-  z-index: 1;
-  min-height: calc(100vh - var(--topbar-h));
+/* Stats bar */
+.stats-bar{
+  display:flex;align-items:center;justify-content:center;gap:0;
+  margin:40px auto;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  overflow:hidden;
+  max-width:600px;
+  animation:land-in 0.9s 0.3s both;
+}
+.stat-item{
+  flex:1;padding:18px 20px;
+  border-right:1px solid var(--border);
+  text-align:center;
+}
+.stat-item:last-child{border-right:none;}
+.stat-num{
+  font-family:'Syne',sans-serif;font-weight:800;font-size:26px;
+  color:var(--text);
+  display:block;
+}
+.stat-lbl{font-size:11px;color:var(--text3);font-weight:500;margin-top:2px;}
+
+/* Portal cards */
+.portals-label{
+  font-size:12px;font-weight:600;letter-spacing:2px;text-transform:uppercase;
+  color:var(--text3);margin-bottom:20px;
+  animation:land-in 0.9s 0.35s both;
+}
+.portals-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:16px;
+  max-width:800px;
+  margin:0 auto;
+  animation:land-in 0.9s 0.4s both;
+}
+.portal-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:30px 24px;
+  cursor:pointer;
+  transition:all 0.3s cubic-bezier(0.16,1,0.3,1);
+  position:relative;
+  overflow:hidden;
+  text-align:left;
+}
+.portal-card::before{
+  content:'';
+  position:absolute;top:0;left:0;right:0;height:3px;
+  background:var(--c);
+  transform:scaleX(0);transform-origin:left;
+  transition:transform 0.3s ease;
+}
+.portal-card::after{
+  content:'';
+  position:absolute;inset:0;
+  background:radial-gradient(circle at 30% 30%,var(--glow),transparent 70%);
+  opacity:0;transition:opacity 0.3s;
+}
+.portal-card:hover{
+  border-color:var(--c);
+  transform:translateY(-4px);
+  box-shadow:0 20px 50px rgba(0,0,0,0.4);
+}
+.portal-card:hover::before{transform:scaleX(1);}
+.portal-card:hover::after{opacity:1;}
+
+.portal-card[data-portal="admin"]{--c:var(--admin-c);--glow:rgba(220,38,38,0.06);}
+.portal-card[data-portal="hospital"]{--c:var(--hosp-c);--glow:rgba(37,99,235,0.06);}
+.portal-card[data-portal="user"]{--c:var(--user-c);--glow:rgba(13,148,136,0.06);}
+
+.portal-icon{
+  width:50px;height:50px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;margin-bottom:16px;
+  background:var(--icon-bg);
+  position:relative;z-index:1;
+}
+.portal-card[data-portal="admin"] .portal-icon{background:rgba(220,38,38,0.12);--icon-bg:rgba(220,38,38,0.12);}
+.portal-card[data-portal="hospital"] .portal-icon{background:rgba(37,99,235,0.12);}
+.portal-card[data-portal="user"] .portal-icon{background:rgba(13,148,136,0.12);}
+
+.portal-name{
+  font-family:'Syne',sans-serif;font-weight:800;font-size:18px;
+  margin-bottom:6px;position:relative;z-index:1;
+}
+.portal-desc{font-size:12px;color:var(--text2);line-height:1.6;position:relative;z-index:1;}
+.portal-arrow{
+  position:absolute;bottom:20px;right:20px;
+  font-size:18px;color:var(--text3);
+  transition:transform 0.2s,color 0.2s;
+}
+.portal-card:hover .portal-arrow{transform:translate(3px,-3px);color:var(--c);}
+
+/* Footer note */
+.landing-footer{
+  margin-top:40px;font-size:12px;color:var(--text3);
+  animation:land-in 0.9s 0.5s both;
 }
 
-/* ─── PANELS ─── */
-.panel { display: none; animation: fadeSlideUp 0.3s ease; }
-.panel.active { display: block; }
-@keyframes fadeSlideUp {
-  from { opacity:0; transform: translateY(12px); }
-  to { opacity:1; transform: translateY(0); }
+/* ═══════════════════════════════════════════
+   AUTH SCREEN (Login / Register)
+═══════════════════════════════════════════ */
+#screen-auth{
+  align-items:center;justify-content:center;
+  min-height:100vh;
+  position:relative;
 }
 
-/* ─── CARDS & GRID ─── */
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
+.auth-bg{
+  position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.015) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,0.015) 1px,transparent 1px);
+  background-size:40px 40px;
 }
-.stat-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 20px;
-  position: relative;
-  overflow: hidden;
-  transition: border-color 0.2s, transform 0.2s;
+.auth-orb{
+  position:absolute;width:500px;height:500px;border-radius:50%;
+  filter:blur(100px);pointer-events:none;
 }
-.stat-card:hover { transform: translateY(-2px); }
-.stat-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 2px;
-  background: var(--accent, var(--red));
-}
-.stat-icon {
-  font-size: 22px;
-  margin-bottom: 12px;
-  display: block;
-}
-.stat-value {
-  font-family: 'Syne', sans-serif;
-  font-size: 28px;
-  font-weight: 800;
-  line-height: 1;
-  margin-bottom: 5px;
-}
-.stat-label {
-  font-size: 12px;
-  color: var(--text2);
-  font-weight: 500;
-}
-.stat-sub {
-  font-size: 11px;
-  color: var(--text3);
-  margin-top: 4px;
+.auth-orb-1{background:radial-gradient(circle,var(--portal-glow),transparent 70%);top:-100px;right:-100px;}
+.auth-orb-2{background:radial-gradient(circle,rgba(224,53,53,0.05),transparent 70%);bottom:-100px;left:-100px;}
+
+.auth-container{
+  position:relative;z-index:1;
+  width:100%;max-width:460px;
+  padding:24px;
+  animation:land-in 0.5s cubic-bezier(0.16,1,0.3,1) both;
 }
 
-.two-col {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
+.auth-back{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:13px;color:var(--text2);
+  cursor:pointer;margin-bottom:28px;
+  transition:color 0.2s;border:none;background:none;
 }
-.col { display: flex; flex-direction: column; gap: 20px; }
+.auth-back:hover{color:var(--text);}
 
-/* ─── CARD ─── */
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-.card-header {
-  padding: 16px 20px 14px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.card-title {
-  font-family: 'Syne', sans-serif;
-  font-weight: 700;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.card-title-dot {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: var(--accent, var(--red));
-}
-.card-body { padding: 16px 20px; }
-.card-action {
-  font-size: 12px;
-  color: var(--accent, var(--red));
-  cursor: pointer;
-  font-weight: 600;
-  background: none;
-  border: none;
-  transition: opacity 0.2s;
-}
-.card-action:hover { opacity: 0.7; }
-
-/* ─── TABLE ─── */
-.table-wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-th {
-  text-align: left;
-  padding: 10px 14px;
-  color: var(--text3);
-  font-weight: 600;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  background: var(--surface2);
-  border-bottom: 1px solid var(--border);
-}
-td {
-  padding: 11px 14px;
-  border-bottom: 1px solid var(--border);
-  color: var(--text);
-  vertical-align: middle;
-}
-tr:last-child td { border-bottom: none; }
-tr:hover td { background: rgba(255,255,255,0.02); }
-
-/* ─── BADGES ─── */
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 9px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 600;
-}
-.badge-green { background: rgba(21,128,61,0.2); color: #4ade80; border: 1px solid rgba(74,222,128,0.2); }
-.badge-red { background: rgba(224,53,53,0.15); color: #f87171; border: 1px solid rgba(248,113,113,0.2); }
-.badge-amber { background: rgba(180,83,9,0.2); color: #fbbf24; border: 1px solid rgba(251,191,36,0.2); }
-.badge-blue { background: rgba(37,99,235,0.2); color: #60a5fa; border: 1px solid rgba(96,165,250,0.2); }
-.badge-purple { background: rgba(124,58,237,0.2); color: #a78bfa; border: 1px solid rgba(167,139,250,0.2); }
-.badge-teal { background: rgba(13,148,136,0.15); color: #2dd4bf; border: 1px solid rgba(45,212,191,0.2); }
-.badge-gray { background: rgba(255,255,255,0.05); color: var(--text2); border: 1px solid var(--border); }
-
-/* ─── FORMS ─── */
-.form-group { margin-bottom: 14px; }
-.form-label {
-  display: block;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text2);
-  margin-bottom: 6px;
-  letter-spacing: 0.3px;
-}
-.form-input, .form-select, .form-textarea {
-  width: 100%;
-  background: var(--surface2);
-  border: 1px solid var(--border2);
-  border-radius: var(--radius-sm);
-  padding: 9px 12px;
-  color: var(--text);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  outline: none;
-}
-.form-input:focus, .form-select:focus, .form-textarea:focus {
-  border-color: var(--accent, var(--red));
-  box-shadow: 0 0 0 3px rgba(224,53,53,0.1);
-}
-.form-input.error { border-color: var(--red); }
-.form-error { font-size: 11px; color: #f87171; margin-top: 4px; }
-.form-select { cursor: pointer; }
-.form-select option { background: var(--surface2); }
-.form-textarea { resize: vertical; min-height: 80px; }
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-
-/* ─── BUTTONS ─── */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 9px 18px;
-  border-radius: var(--radius-sm);
-  font-family: 'DM Sans', sans-serif;
-  font-weight: 600;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: none;
-  outline: none;
-}
-.btn-primary {
-  background: var(--accent, var(--red));
-  color: white;
-}
-.btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
-.btn-ghost {
-  background: transparent;
-  color: var(--text2);
-  border: 1px solid var(--border2);
-}
-.btn-ghost:hover { background: var(--surface2); color: var(--text); }
-.btn-sm { padding: 5px 12px; font-size: 12px; }
-.btn-danger { background: rgba(224,53,53,0.15); color: #f87171; border: 1px solid rgba(248,113,113,0.2); }
-.btn-danger:hover { background: rgba(224,53,53,0.25); }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
-.btn-full { width: 100%; justify-content: center; }
-
-/* ─── TOGGLE ─── */
-.toggle-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--border);
-}
-.toggle-row:last-child { border-bottom: none; }
-.toggle-info .toggle-title { font-size: 13px; font-weight: 500; }
-.toggle-info .toggle-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
-.toggle {
-  position: relative;
-  width: 40px; height: 22px;
-}
-.toggle input { opacity: 0; width: 0; height: 0; }
-.toggle-track {
-  position: absolute;
-  inset: 0;
-  background: var(--surface3);
-  border-radius: 11px;
-  cursor: pointer;
-  transition: background 0.2s;
-  border: 1px solid var(--border2);
-}
-.toggle input:checked + .toggle-track { background: var(--accent, var(--red)); border-color: var(--accent, var(--red)); }
-.toggle-track::after {
-  content: '';
-  position: absolute;
-  left: 3px; top: 2px;
-  width: 16px; height: 16px;
-  border-radius: 50%;
-  background: white;
-  transition: transform 0.2s;
-}
-.toggle input:checked + .toggle-track::after { transform: translateX(18px); }
-
-/* ─── SKELETON ─── */
-.skeleton {
-  background: linear-gradient(90deg, var(--surface2) 25%, var(--surface3) 50%, var(--surface2) 75%);
-  background-size: 200% 100%;
-  animation: skeleton-shine 1.4s infinite;
-  border-radius: 6px;
-}
-@keyframes skeleton-shine {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-.skel-row { height: 40px; margin-bottom: 8px; }
-.skel-stat { height: 90px; border-radius: var(--radius); }
-
-/* ─── EMPTY STATE ─── */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 20px;
-  text-align: center;
-  color: var(--text3);
-  gap: 12px;
-}
-.empty-state svg { opacity: 0.3; }
-.empty-state p { font-size: 13px; }
-
-/* ─── BLOOD GROUP GRID ─── */
-.blood-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-}
-.blood-card {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 14px 12px;
-  text-align: center;
-  transition: border-color 0.2s;
-  cursor: pointer;
-}
-.blood-card:hover { border-color: var(--border2); }
-.blood-card.critical { border-color: rgba(224,53,53,0.4); background: rgba(224,53,53,0.05); }
-.blood-card.warning { border-color: rgba(251,191,36,0.3); background: rgba(251,191,36,0.05); }
-.blood-card.good { border-color: rgba(74,222,128,0.2); background: rgba(74,222,128,0.03); }
-.blood-type {
-  font-family: 'Syne', sans-serif;
-  font-weight: 800;
-  font-size: 18px;
-  color: var(--text);
-}
-.blood-units {
-  font-size: 22px;
-  font-weight: 700;
-  margin: 4px 0;
-}
-.blood-card.critical .blood-units { color: #f87171; }
-.blood-card.warning .blood-units { color: #fbbf24; }
-.blood-card.good .blood-units { color: #4ade80; }
-.blood-card-label { font-size: 11px; color: var(--text3); }
-.mini-bar {
-  height: 3px;
-  background: var(--surface3);
-  border-radius: 3px;
-  margin-top: 8px;
-  overflow: hidden;
-}
-.mini-bar-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.5s ease;
+.auth-portal-tag{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:6px 14px;border-radius:50px;
+  font-size:12px;font-weight:600;
+  margin-bottom:20px;
+  border:1px solid;
 }
 
-/* ─── MAP ─── */
-.map-container {
-  height: 260px;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  position: relative;
-}
-.map-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  color: var(--text3);
-  font-size: 13px;
+.auth-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  overflow:hidden;
 }
 
-/* ─── TRUST SCORE ─── */
-.trust-circle {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 20px;
+.auth-tabs{
+  display:grid;grid-template-columns:1fr 1fr;
+  border-bottom:1px solid var(--border);
 }
-.trust-ring {
-  position: relative;
-  width: 120px;
-  height: 120px;
+.auth-tab{
+  padding:16px;text-align:center;
+  font-family:'Syne',sans-serif;font-weight:700;font-size:14px;
+  cursor:pointer;color:var(--text2);
+  transition:all 0.2s;border:none;background:none;
+  position:relative;
 }
-.trust-ring svg { transform: rotate(-90deg); }
-.trust-ring-bg { stroke: var(--surface3); }
-.trust-ring-fill { stroke: var(--donor); stroke-linecap: round; transition: stroke-dashoffset 1s ease; }
-.trust-value {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-family: 'Syne', sans-serif;
-  font-weight: 800;
-  font-size: 26px;
+.auth-tab::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:2px;
+  background:var(--portal-accent);
+  transform:scaleX(0);transition:transform 0.2s;
 }
-.trust-value span { font-size: 12px; font-weight: 400; color: var(--text3); }
+.auth-tab.active{color:var(--text);}
+.auth-tab.active::after{transform:scaleX(1);}
+.auth-tab:hover:not(.active){background:var(--surface2);}
 
-/* ─── BADGE CARDS ─── */
-.badge-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-top: 8px;
-}
-.earned-badge {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 12px 8px;
-  text-align: center;
-}
-.earned-badge.unlocked { border-color: rgba(180,83,9,0.3); background: rgba(180,83,9,0.06); }
-.badge-icon { font-size: 24px; display: block; margin-bottom: 5px; }
-.badge-name { font-size: 11px; color: var(--text2); font-weight: 500; }
-.badge-locked { opacity: 0.3; }
+.auth-body{padding:28px;}
 
-/* ─── PROGRESS BAR ─── */
-.progress-bar {
-  height: 6px;
-  background: var(--surface3);
-  border-radius: 6px;
-  overflow: hidden;
-}
-.progress-fill {
-  height: 100%;
-  border-radius: 6px;
-  background: var(--accent, var(--red));
-  transition: width 0.5s ease;
-}
+.auth-form{display:none;}
+.auth-form.active{display:block;}
 
-/* ─── PAGINATION ─── */
-.pagination {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  border-top: 1px solid var(--border);
-  font-size: 12px;
-  color: var(--text3);
+.form-group{margin-bottom:16px;}
+.form-label{
+  display:block;font-size:12px;font-weight:600;
+  color:var(--text2);margin-bottom:7px;letter-spacing:0.3px;
 }
-.page-btns { display: flex; gap: 4px; }
-.page-btn {
-  padding: 4px 10px;
-  border-radius: 5px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  color: var(--text2);
-  cursor: pointer;
-  font-size: 12px;
-  transition: all 0.2s;
+.form-input,.form-select{
+  width:100%;
+  background:var(--surface2);
+  border:1.5px solid var(--border);
+  border-radius:var(--r-sm);
+  padding:11px 14px;
+  color:var(--text);
+  font-family:'DM Sans',sans-serif;font-size:14px;
+  transition:border-color 0.2s,box-shadow 0.2s;outline:none;
 }
-.page-btn.active { background: var(--red); color: white; border-color: var(--red); }
-.page-btn:hover:not(.active) { background: var(--surface3); }
+.form-input:focus,.form-select:focus{
+  border-color:var(--portal-accent);
+  box-shadow:0 0 0 3px var(--portal-focus);
+}
+.form-input.err{border-color:#f87171;}
+.form-err{font-size:11px;color:#f87171;margin-top:5px;display:none;}
+.form-err.show{display:block;}
+.form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.form-select option{background:var(--surface2);}
 
-/* ─── SEARCH ─── */
-.search-row {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 14px;
-}
-.search-input {
-  flex: 1;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 8px 12px;
-  color: var(--text);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
-  outline: none;
-}
-.search-input:focus { border-color: var(--border2); }
+.form-hint{font-size:11px;color:var(--text3);margin-top:5px;}
 
-/* ─── TOAST ─── */
-#toast-container {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  z-index: 9999;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.btn-submit{
+  width:100%;padding:13px;
+  border:none;border-radius:var(--r-sm);
+  background:var(--portal-accent);color:white;
+  font-family:'Syne',sans-serif;font-weight:700;font-size:15px;
+  cursor:pointer;margin-top:8px;
+  transition:all 0.2s;
+  position:relative;overflow:hidden;
 }
-.toast {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-  max-width: 320px;
-  animation: toast-in 0.3s ease;
-  border-left: 3px solid var(--red);
+.btn-submit::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(255,255,255,0.15),transparent);
 }
-.toast.success { border-left-color: #22c55e; }
-.toast.error { border-left-color: #f87171; }
-.toast.info { border-left-color: #60a5fa; }
-@keyframes toast-in {
-  from { opacity:0; transform: translateX(20px); }
-  to { opacity:1; transform: translateX(0); }
+.btn-submit:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 8px 25px var(--portal-focus);}
+.btn-submit:active{transform:translateY(0);}
+.btn-submit:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
+
+.auth-divider{
+  text-align:center;font-size:12px;color:var(--text3);
+  margin:16px 0;position:relative;
 }
-@keyframes toast-out {
-  to { opacity:0; transform: translateX(20px); }
+.auth-divider::before{
+  content:'';position:absolute;top:50%;left:0;right:0;height:1px;
+  background:var(--border);
+}
+.auth-divider span{background:var(--surface);padding:0 12px;position:relative;}
+
+.auth-footer-note{
+  text-align:center;font-size:12px;color:var(--text3);margin-top:18px;
+}
+.auth-link{color:var(--portal-accent);cursor:pointer;text-decoration:none;}
+.auth-link:hover{text-decoration:underline;}
+
+/* Portal theme vars (set dynamically) */
+[data-portal-theme="admin"]{
+  --portal-accent:#dc2626;--portal-glow:rgba(220,38,38,0.12);--portal-focus:rgba(220,38,38,0.15);
+}
+[data-portal-theme="hospital"]{
+  --portal-accent:#2563eb;--portal-glow:rgba(37,99,235,0.12);--portal-focus:rgba(37,99,235,0.15);
+}
+[data-portal-theme="user"]{
+  --portal-accent:#0d9488;--portal-glow:rgba(13,148,136,0.12);--portal-focus:rgba(13,148,136,0.15);
 }
 
-/* ─── SOS ALERT ITEMS ─── */
-.sos-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--border);
-}
-.sos-item:last-child { border-bottom: none; }
-.sos-blood {
-  width: 38px; height: 38px;
-  border-radius: 9px;
-  background: var(--red-dim);
-  color: #f87171;
-  font-family: 'Syne', sans-serif;
-  font-weight: 800;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.sos-info { flex: 1; min-width: 0; }
-.sos-hospital { font-size: 13px; font-weight: 600; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sos-meta { font-size: 11px; color: var(--text3); }
-.sos-actions { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+/* ═══════════════════════════════════════════
+   DASHBOARD SHELL
+═══════════════════════════════════════════ */
+#screen-dashboard{flex-direction:row;min-height:100vh;}
 
-/* ─── NOTIFICATION ITEM ─── */
-.notif-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 11px 0;
-  border-bottom: 1px solid var(--border);
+.dash-sidebar{
+  width:240px;flex-shrink:0;
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  position:fixed;top:0;left:0;bottom:0;
+  z-index:100;
+  transition:transform 0.3s;
 }
-.notif-item:last-child { border-bottom: none; }
-.notif-dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--red);
-  flex-shrink: 0;
+.dash-logo{
+  padding:22px 20px 18px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+}
+.dash-logo-icon{font-size:24px;filter:drop-shadow(0 0 8px rgba(224,53,53,0.6));}
+.dash-logo-text{font-family:'Syne',sans-serif;font-weight:800;font-size:17px;letter-spacing:-0.5px;}
+.dash-logo-text em{font-style:normal;color:var(--portal-accent);}
+
+.dash-portal-badge{
+  margin:14px 20px;
+  padding:8px 14px;
+  border-radius:var(--r-sm);
+  font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+  background:var(--portal-glow);color:var(--portal-accent);
+  border:1px solid rgba(255,255,255,0.07);
+  display:flex;align-items:center;gap:8px;
 }
 
-/* ─── SETTINGS TOGGLE GROUP ─── */
-.settings-card {
-  background: var(--surface2);
-  border-radius: var(--radius-sm);
-  padding: 4px 16px;
+.dash-nav{flex:1;overflow-y:auto;padding:8px 0 16px;}
+.nav-section{
+  padding:12px 20px 6px;
+  font-size:10px;font-weight:600;letter-spacing:2px;
+  color:var(--text3);text-transform:uppercase;
+}
+.nav-btn{
+  display:flex;align-items:center;gap:11px;
+  padding:10px 20px;
+  cursor:pointer;border:none;background:none;
+  color:var(--text2);width:100%;text-align:left;
+  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;
+  transition:all 0.18s;border-left:3px solid transparent;
+}
+.nav-btn:hover{background:rgba(255,255,255,0.04);color:var(--text);}
+.nav-btn.active{
+  border-left-color:var(--portal-accent);
+  background:var(--portal-glow);color:var(--text);
+}
+.nav-btn-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0;}
+.nav-btn-badge{
+  margin-left:auto;
+  background:var(--portal-accent);color:white;
+  border-radius:50px;font-size:10px;font-weight:700;
+  padding:1px 7px;min-width:20px;text-align:center;
 }
 
-/* ─── NGO SUGGESTION CARDS ─── */
-.suggestion-card {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 14px;
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
+.dash-user{
+  padding:16px 20px;border-top:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
 }
-.suggestion-rank {
-  font-family: 'Syne', sans-serif;
-  font-weight: 800;
-  font-size: 22px;
-  color: var(--ngo);
-  line-height: 1;
+.dash-avatar{
+  width:36px;height:36px;border-radius:50%;
+  background:linear-gradient(135deg,var(--portal-accent),rgba(255,255,255,0.2));
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:14px;flex-shrink:0;
 }
-.suggestion-info { flex: 1; }
-.suggestion-area { font-size: 14px; font-weight: 600; margin-bottom: 5px; }
-.suggestion-meta { display: flex; gap: 12px; margin-top: 8px; }
-.suggestion-meta span { font-size: 11px; color: var(--text3); }
-.suggestion-meta strong { color: var(--text2); }
+.dash-user-info{flex:1;min-width:0;}
+.dash-user-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dash-user-role{font-size:11px;color:var(--text3);}
+.dash-logout{
+  background:none;border:none;color:var(--text3);cursor:pointer;
+  font-size:16px;transition:color 0.2s;flex-shrink:0;
+}
+.dash-logout:hover{color:var(--text);}
 
-/* ─── CHART WRAP ─── */
-.chart-wrap { position: relative; height: 200px; padding: 8px 0; }
+/* Main content area */
+.dash-main{
+  margin-left:240px;display:flex;flex-direction:column;min-height:100vh;flex:1;
+}
+.dash-topbar{
+  height:62px;
+  background:rgba(6,6,10,0.85);
+  backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 28px;
+  position:sticky;top:0;z-index:90;
+}
+.topbar-left{display:flex;align-items:center;gap:14px;}
+.topbar-title{
+  font-family:'Syne',sans-serif;font-weight:700;font-size:17px;
+}
+.live-pill{
+  display:flex;align-items:center;gap:5px;
+  background:rgba(34,197,94,0.1);
+  border:1px solid rgba(34,197,94,0.2);
+  border-radius:50px;padding:4px 10px;
+  font-size:11px;font-weight:600;color:#4ade80;
+}
+.live-dot{width:6px;height:6px;border-radius:50%;background:#22c55e;animation:live-pulse 1.4s infinite;}
+@keyframes live-pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.topbar-sos{
+  background:var(--admin-c);color:white;border:none;border-radius:var(--r-sm);
+  padding:8px 16px;font-family:'Syne',sans-serif;font-weight:700;font-size:12px;
+  cursor:pointer;animation:sos-glow 2s infinite;letter-spacing:0.5px;
+}
+@keyframes sos-glow{0%,100%{box-shadow:0 0 10px rgba(220,38,38,0.4);}50%{box-shadow:0 0 22px rgba(220,38,38,0.7);}}
 
-/* ─── COUNTDOWN ─── */
-.countdown-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--border);
+.dash-content{
+  flex:1;padding:28px;
+  position:relative;
 }
-.countdown-item:last-child { border-bottom: none; }
-.countdown-timer {
-  font-family: 'Syne', sans-serif;
-  font-weight: 700;
-  font-size: 14px;
-}
-.countdown-timer.urgent { color: #f87171; }
-.countdown-timer.warning { color: #fbbf24; }
-.countdown-timer.ok { color: #4ade80; }
-
-/* ─── RESPONSIVE ─── */
-@media (max-width: 1200px) {
-  .stats-row { grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 900px) {
-  .two-col { grid-template-columns: 1fr; }
-}
-@media (max-width: 768px) {
-  #sidebar { 
-    top: auto; left: 0; right: 0; bottom: 0;
-    width: 100%; height: 60px;
-    flex-direction: row;
-    border-right: none;
-    border-top: 1px solid var(--border);
-    padding: 0;
-    z-index: 100;
-  }
-  .sidebar-logo, .sidebar-bottom, .nav-section-label, .nav-label { display: none; }
-  .sidebar-nav { 
-    flex-direction: row; 
-    overflow-x: auto; 
-    padding: 0;
-    display: flex;
-    align-items: center;
-    width: 100%;
-  }
-  .nav-item { 
-    flex-direction: column; 
-    gap: 2px; 
-    padding: 8px 14px;
-    border-left: none;
-    border-top: 3px solid transparent;
-    justify-content: center;
-  }
-  .nav-item.active { border-top-color: var(--red); border-left-color: transparent; }
-  #topbar { left: 0; }
-  #main { margin-left: 0; margin-bottom: 60px; padding: 16px; }
-  .stats-row { grid-template-columns: repeat(2, 1fr); }
+.dash-content::before{
+  content:'';position:fixed;inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.012) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,0.012) 1px,transparent 1px);
+  background-size:45px 45px;
+  pointer-events:none;z-index:0;
 }
 
-/* ─── SCROLLBAR ─── */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+/* ─── Tab panels ─── */
+.tab-panel{display:none;position:relative;z-index:1;animation:tab-in 0.25s ease both;}
+.tab-panel.active{display:block;}
+@keyframes tab-in{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
 
-/* ─── DONOR ITEM ─── */
-.donor-card {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 12px 14px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
+/* ─── Cards ─── */
+.g-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
+@media(max-width:1200px){.g-stats{grid-template-columns:repeat(2,1fr);}}
+.s-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);padding:20px;
+  position:relative;overflow:hidden;
+  transition:transform 0.2s,border-color 0.2s;
 }
-.donor-avatar {
-  width: 34px; height: 34px;
-  border-radius: 50%;
-  background: var(--surface3);
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 700; font-size: 13px;
-  color: var(--text2);
-  flex-shrink: 0;
+.s-card:hover{transform:translateY(-2px);}
+.s-card::after{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:var(--c,var(--portal-accent));
 }
-.donor-info { flex: 1; min-width: 0; }
-.donor-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.donor-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
-.avail-dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-}
-.avail-dot.on { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
-.avail-dot.off { background: var(--text3); }
+.s-icon{font-size:20px;margin-bottom:10px;display:block;}
+.s-val{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;line-height:1;margin-bottom:5px;}
+.s-lbl{font-size:12px;color:var(--text2);font-weight:500;}
+.s-sub{font-size:11px;color:var(--text3);margin-top:3px;}
 
-/* ─── CAMP CARD ─── */
-.camp-card {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 14px;
-}
-.camp-name { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
-.camp-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
-.camp-meta span { font-size: 11px; color: var(--text3); }
+.g-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+@media(max-width:960px){.g-2{grid-template-columns:1fr;}}
+.col{display:flex;flex-direction:column;gap:20px;}
 
-/* ─── HOSPITAL CARD ─── */
-.hosp-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--border);
+.card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);overflow:hidden;
 }
-.hosp-card:last-child { border-bottom: none; }
-.hosp-icon {
-  width: 36px; height: 36px;
-  border-radius: 9px;
-  background: rgba(37,99,235,0.1);
-  color: #60a5fa;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 16px;
-  flex-shrink: 0;
+.card-hd{
+  padding:16px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
 }
+.card-title{
+  font-family:'Syne',sans-serif;font-weight:700;font-size:14px;
+  display:flex;align-items:center;gap:8px;
+}
+.card-dot{width:7px;height:7px;border-radius:50%;background:var(--portal-accent);}
+.card-bd{padding:18px 20px;}
+.card-act{
+  background:none;border:none;color:var(--portal-accent);
+  cursor:pointer;font-size:12px;font-weight:600;
+  transition:opacity 0.2s;
+}
+.card-act:hover{opacity:0.7;}
+
+/* table */
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{text-align:left;padding:10px 16px;color:var(--text3);font-size:11px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;background:var(--surface2);border-bottom:1px solid var(--border);}
+td{padding:12px 16px;border-bottom:1px solid var(--border);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(255,255,255,0.018);}
+
+/* badges */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:50px;font-size:11px;font-weight:600;}
+.b-green{background:rgba(21,128,61,0.18);color:#4ade80;border:1px solid rgba(74,222,128,0.2);}
+.b-red{background:rgba(224,53,53,0.15);color:#f87171;border:1px solid rgba(248,113,113,0.2);}
+.b-amber{background:rgba(180,83,9,0.18);color:#fbbf24;border:1px solid rgba(251,191,36,0.2);}
+.b-blue{background:rgba(37,99,235,0.18);color:#60a5fa;border:1px solid rgba(96,165,250,0.2);}
+.b-gray{background:rgba(255,255,255,0.05);color:var(--text2);border:1px solid var(--border);}
+.b-teal{background:rgba(13,148,136,0.15);color:#2dd4bf;border:1px solid rgba(45,212,191,0.2);}
+
+/* forms in dashboard */
+.d-form .form-group{margin-bottom:14px;}
+.d-form .form-label{font-size:12px;}
+.d-form .form-input,.d-form .form-select{font-size:13px;padding:9px 12px;}
+.d-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:var(--r-sm);font-family:'DM Sans',sans-serif;font-weight:600;font-size:13px;cursor:pointer;transition:all 0.2s;border:none;}
+.btn-p{background:var(--portal-accent);color:white;}
+.btn-p:hover{filter:brightness(1.1);transform:translateY(-1px);}
+.btn-g{background:transparent;color:var(--text2);border:1px solid var(--border);}
+.btn-g:hover{background:var(--surface2);}
+.btn-sm{padding:5px 12px;font-size:12px;}
+.btn-danger{background:rgba(224,53,53,0.12);color:#f87171;border:1px solid rgba(248,113,113,0.2);}
+.btn-full{width:100%;justify-content:center;}
+
+/* sos item */
+.sos-row{display:flex;align-items:flex-start;gap:12px;padding:13px 0;border-bottom:1px solid var(--border);}
+.sos-row:last-child{border-bottom:none;}
+.sos-drop{width:40px;height:40px;border-radius:10px;background:rgba(224,53,53,0.12);color:#f87171;font-family:'Syne',sans-serif;font-weight:800;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.sos-info{flex:1;min-width:0;}
+.sos-hospital{font-size:13px;font-weight:600;margin-bottom:3px;}
+.sos-meta{font-size:11px;color:var(--text3);}
+
+/* toggle */
+.tog{position:relative;width:38px;height:21px;}
+.tog input{opacity:0;width:0;height:0;}
+.tog-track{position:absolute;inset:0;background:var(--surface3);border-radius:10px;cursor:pointer;transition:background 0.2s;border:1px solid var(--border);}
+.tog input:checked+.tog-track{background:var(--portal-accent);}
+.tog-track::after{content:'';position:absolute;left:3px;top:2px;width:15px;height:15px;border-radius:50%;background:white;transition:transform 0.2s;}
+.tog input:checked+.tog-track::after{transform:translateX(17px);}
+
+/* blood grid */
+.blood-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.blood-c{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 10px;text-align:center;transition:border-color 0.2s;}
+.blood-c.crit{border-color:rgba(224,53,53,0.4);background:rgba(224,53,53,0.04);}
+.blood-c.warn{border-color:rgba(251,191,36,0.3);background:rgba(251,191,36,0.04);}
+.blood-c.good{border-color:rgba(74,222,128,0.2);background:rgba(74,222,128,0.03);}
+.blood-type{font-family:'Syne',sans-serif;font-weight:800;font-size:16px;}
+.blood-units{font-size:20px;font-weight:700;margin:3px 0;}
+.blood-c.crit .blood-units{color:#f87171;}
+.blood-c.warn .blood-units{color:#fbbf24;}
+.blood-c.good .blood-units{color:#4ade80;}
+.blood-lbl{font-size:10px;color:var(--text3);}
+.mini-prog{height:3px;background:var(--surface3);border-radius:3px;margin-top:7px;overflow:hidden;}
+.mini-prog-fill{height:100%;border-radius:3px;transition:width 0.5s;}
+
+/* chart */
+.chart-box{height:200px;position:relative;}
+
+/* empty */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:36px;gap:10px;color:var(--text3);text-align:center;font-size:13px;}
+
+/* skeleton */
+.skel{background:linear-gradient(90deg,var(--surface2) 25%,var(--surface3) 50%,var(--surface2) 75%);background-size:200% 100%;animation:sk 1.3s infinite;border-radius:6px;}
+@keyframes sk{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+.skel-row{height:38px;margin-bottom:8px;}
+
+/* toast */
+#toasts{position:fixed;bottom:24px;right:24px;z-index:99999;display:flex;flex-direction:column;gap:8px;}
+.toast{
+  display:flex;align-items:center;gap:10px;
+  padding:12px 16px;background:var(--surface2);
+  border:1px solid var(--border);border-radius:var(--r-sm);
+  font-size:13px;max-width:320px;
+  box-shadow:0 4px 24px rgba(0,0,0,0.5);
+  animation:t-in 0.3s ease both;
+  border-left:3px solid var(--portal-accent,var(--red2));
+}
+.toast.succ{border-left-color:#22c55e;}
+.toast.err{border-left-color:#f87171;}
+.toast.info{border-left-color:#60a5fa;}
+@keyframes t-in{from{opacity:0;transform:translateX(20px);}to{opacity:1;transform:translateX(0);}}
+
+/* ─── Donor card ─── */
+.d-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;display:flex;align-items:center;gap:10px;}
+.d-av{width:32px;height:32px;border-radius:50%;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:var(--text2);flex-shrink:0;}
+.d-name{font-size:13px;font-weight:600;}
+.d-meta{font-size:11px;color:var(--text3);}
+
+/* ─── Camp card ─── */
+.camp-c{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px;}
+.camp-name{font-size:14px;font-weight:600;margin-bottom:5px;}
+.camp-meta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
+.camp-meta span{font-size:11px;color:var(--text3);}
+
+/* ─── Profile card ─── */
+.profile-hero{display:flex;align-items:center;gap:18px;margin-bottom:20px;}
+.profile-avatar{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--portal-accent),rgba(255,255,255,0.2));display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:24px;flex-shrink:0;}
+
+/* ─── Responsive ─── */
+@media(max-width:768px){
+  .dash-sidebar{transform:translateX(-100%);}
+  .dash-sidebar.open{transform:translateX(0);}
+  .dash-main{margin-left:0;}
+  .portals-grid{grid-template-columns:1fr;}
+  .g-stats{grid-template-columns:repeat(2,1fr);}
+  .g-2{grid-template-columns:1fr;}
+  .blood-grid{grid-template-columns:repeat(4,1fr);}
+  .d-row{grid-template-columns:1fr;}
+}
+
+/* ─── Map placeholder ─── */
+.map-ph{height:220px;background:var(--surface2);border-radius:var(--r-sm);border:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--text3);font-size:12px;overflow:hidden;}
+.map-ph img{width:100%;height:100%;object-fit:cover;}
+
+/* countdown */
+.exp-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);}
+.exp-row:last-child{border-bottom:none;}
+.exp-timer{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;}
+.exp-timer.u{color:#f87171;}.exp-timer.w{color:#fbbf24;}.exp-timer.ok{color:#4ade80;}
 </style>
 </head>
 <body>
 
-<!-- SIDEBAR -->
-<nav id="sidebar">
-  <div class="sidebar-logo">
-    <span class="logo-icon">🩸</span>
-    <span class="logo-text">Blood<span>Connect</span></span>
+<!-- ═══════════════════════════════════════════════
+     SCREEN 1: LANDING PAGE
+═══════════════════════════════════════════════ -->
+<div id="screen-landing" class="screen active">
+  <div class="bg-orb orb1"></div>
+  <div class="bg-orb orb2"></div>
+  <div class="bg-orb orb3"></div>
+
+  <div class="landing-inner">
+    <div class="landing-eyebrow">
+      <span class="eyebrow-dot"></span>
+      India's Blood Donation Network
+    </div>
+
+    <div class="landing-logo">
+      <span class="logo-drop">🩸</span>
+    </div>
+
+    <h1 class="landing-title">BloodConnect</h1>
+    <p class="landing-subtitle">
+      Every second counts. Connecting donors, hospitals, and communities to save lives across India.
+    </p>
+
+    <div class="stats-bar">
+      <div class="stat-item">
+        <span class="stat-num" id="hero-donors">24,800+</span>
+        <div class="stat-lbl">Verified Donors</div>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="hero-lives">9,200+</span>
+        <div class="stat-lbl">Lives Saved</div>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="hero-hospitals">380+</span>
+        <div class="stat-lbl">Partner Hospitals</div>
+      </div>
+    </div>
+
+    <p class="portals-label">Choose your portal to continue</p>
+
+    <div class="portals-grid">
+      <div class="portal-card" data-portal="admin" onclick="goToAuth('admin')">
+        <div class="portal-icon">🛡️</div>
+        <div class="portal-name">Admin Portal</div>
+        <div class="portal-desc">System management, analytics, user oversight, and platform controls.</div>
+        <span class="portal-arrow">↗</span>
+      </div>
+      <div class="portal-card" data-portal="hospital" onclick="goToAuth('hospital')">
+        <div class="portal-icon">🏥</div>
+        <div class="portal-name">Hospital Portal</div>
+        <div class="portal-desc">Raise SOS requests, track inventory, connect with blood banks.</div>
+        <span class="portal-arrow">↗</span>
+      </div>
+      <div class="portal-card" data-portal="user" onclick="goToAuth('user')">
+        <div class="portal-icon">❤️</div>
+        <div class="portal-name">User Portal</div>
+        <div class="portal-desc">Donors, patients and families — manage donations and requests.</div>
+        <span class="portal-arrow">↗</span>
+      </div>
+    </div>
+
+    <div class="landing-footer">Secured by Supabase · Real-time matching · HIPAA-aware design</div>
   </div>
-  <div class="sidebar-nav">
-    <div class="nav-section-label">MANAGEMENT</div>
-    <div class="nav-item active" data-panel="admin" onclick="switchPanel('admin', this)">
-      <div class="nav-badge" style="background:rgba(192,57,43,0.2);color:#e74c3c;">A</div>
-      <span class="nav-label">Admin Panel</span>
-    </div>
-    <div class="nav-item" data-panel="hospital" onclick="switchPanel('hospital', this)">
-      <div class="nav-badge" style="background:rgba(37,99,235,0.2);color:#60a5fa;">H</div>
-      <span class="nav-label">Hospital Panel</span>
-    </div>
-    <div class="nav-section-label">COMMUNITY</div>
-    <div class="nav-item" data-panel="donor" onclick="switchPanel('donor', this)">
-      <div class="nav-badge" style="background:rgba(13,148,136,0.2);color:#2dd4bf;">D</div>
-      <span class="nav-label">Donor Panel</span>
-    </div>
-    <div class="nav-item" data-panel="patient" onclick="switchPanel('patient', this)">
-      <div class="nav-badge" style="background:rgba(124,58,237,0.2);color:#a78bfa;">P</div>
-      <span class="nav-label">Patient / Family</span>
-    </div>
-    <div class="nav-section-label">OPERATIONS</div>
-    <div class="nav-item" data-panel="ngo" onclick="switchPanel('ngo', this)">
-      <div class="nav-badge" style="background:rgba(180,83,9,0.2);color:#fbbf24;">N</div>
-      <span class="nav-label">NGO Panel</span>
-    </div>
-    <div class="nav-item" data-panel="bank" onclick="switchPanel('bank', this)">
-      <div class="nav-badge" style="background:rgba(21,128,61,0.2);color:#4ade80;">B</div>
-      <span class="nav-label">Blood Bank</span>
-    </div>
-  </div>
-  <div class="sidebar-bottom">BloodConnect v2.1 · India</div>
-</nav>
+</div>
 
-<!-- TOPBAR -->
-<header id="topbar">
-  <div class="topbar-title">
-    <span class="panel-color-dot" id="panel-dot" style="background:#c0392b"></span>
-    <span id="panel-title-text">Admin Panel</span>
-  </div>
-  <div class="topbar-right">
-    <span class="live-badge" id="live-indicator" style="display:none">
-      <span class="live-dot"></span>LIVE
-    </span>
-    <span class="demo-badge" id="demo-badge" style="display:none">Demo Data</span>
-    <button class="sos-btn" onclick="openSOS()">🚨 SOS</button>
-    <div class="avatar">A</div>
-  </div>
-</header>
+<!-- ═══════════════════════════════════════════════
+     SCREEN 2: AUTH (Login / Register)
+═══════════════════════════════════════════════ -->
+<div id="screen-auth" class="screen">
+  <div class="auth-bg"></div>
+  <div class="auth-orb auth-orb-1"></div>
+  <div class="auth-orb auth-orb-2"></div>
 
-<!-- MAIN CONTENT -->
-<main id="main">
+  <div class="auth-container">
+    <button class="auth-back" onclick="goBack()">← Back to portals</button>
 
-  <!-- ══════════════════ ADMIN PANEL ══════════════════ -->
-  <div class="panel active" id="panel-admin" style="--accent:#c0392b">
+    <div class="auth-portal-tag" id="auth-portal-tag">🛡️ Admin Portal</div>
 
-    <div class="stats-row" id="admin-stats">
-      <div class="stat-card" style="--accent:#c0392b">
-        <span class="stat-icon">👥</span>
-        <div class="stat-value" id="stat-users">—</div>
-        <div class="stat-label">Total Users</div>
-        <div class="stat-sub">All registered profiles</div>
-      </div>
-      <div class="stat-card" style="--accent:#e03535">
-        <span class="stat-icon">🚨</span>
-        <div class="stat-value" id="stat-sos">—</div>
-        <div class="stat-label">Active SOS Requests</div>
-        <div class="stat-sub">Needs immediate response</div>
-      </div>
-      <div class="stat-card" style="--accent:#4ade80">
-        <span class="stat-icon">✅</span>
-        <div class="stat-value" id="stat-donors">—</div>
-        <div class="stat-label">Verified Donors</div>
-        <div class="stat-sub">Cleared & active</div>
-      </div>
-      <div class="stat-card" style="--accent:#60a5fa">
-        <span class="stat-icon">🏕️</span>
-        <div class="stat-value" id="stat-camps">—</div>
-        <div class="stat-label">Blood Camps Today</div>
-        <div class="stat-sub">Scheduled for today</div>
-      </div>
-    </div>
-
-    <div class="two-col">
-      <div class="col">
-        <!-- User Management -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><span class="card-title-dot"></span>User Management</div>
-            <button class="card-action" onclick="loadUsers()">↻ Refresh</button>
-          </div>
-          <div class="card-body" style="padding-bottom:0">
-            <div class="search-row">
-              <input type="text" class="search-input" id="user-search" placeholder="Search name or role…" oninput="filterUsers()">
-              <select class="form-select" style="width:120px" id="user-role-filter" onchange="filterUsers()">
-                <option value="">All Roles</option>
-                <option value="admin">Admin</option>
-                <option value="donor">Donor</option>
-                <option value="hospital">Hospital</option>
-                <option value="patient">Patient</option>
-                <option value="ngo">NGO</option>
-              </select>
-            </div>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr><th>Name</th><th>Role</th><th>Status</th><th>Joined</th><th>Action</th></tr>
-              </thead>
-              <tbody id="user-table-body">
-                <tr><td colspan="5"><div class="skeleton skel-row"></div><div class="skeleton skel-row"></div><div class="skeleton skel-row"></div></td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="pagination">
-            <span id="user-page-info">—</span>
-            <div class="page-btns" id="user-page-btns"></div>
-          </div>
-        </div>
-
-        <!-- Donor Verification Queue -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><span class="card-title-dot"></span>Donor Verification Queue</div>
-            <span class="badge badge-amber" id="unverified-count">—</span>
-          </div>
-          <div class="card-body" style="padding:0">
-            <div id="verification-list" style="padding:0 20px">
-              <div class="skeleton skel-row" style="margin:16px 0"></div>
-            </div>
-          </div>
-        </div>
+    <div class="auth-card">
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Sign In</button>
+        <button class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">Register</button>
       </div>
 
-      <div class="col">
-        <!-- Active SOS Requests -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><span class="card-title-dot" style="background:#e03535"></span>Active SOS Requests</div>
-            <span class="badge badge-red" id="sos-live-count">LIVE</span>
+      <div class="auth-body">
+        <!-- LOGIN FORM -->
+        <form class="auth-form active" id="form-login" onsubmit="handleLogin(event)">
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input type="email" class="form-input" id="login-email" placeholder="you@example.com" required>
+            <div class="form-err" id="login-email-err">Please enter a valid email</div>
           </div>
-          <div class="card-body" style="padding-bottom:8px">
-            <div id="admin-sos-list">
-              <div class="skeleton skel-row"></div>
-              <div class="skeleton skel-row"></div>
-            </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input type="password" class="form-input" id="login-pass" placeholder="••••••••" required>
+            <div class="form-err" id="login-pass-err">Password is required</div>
           </div>
-        </div>
+          <button type="submit" class="btn-submit" id="btn-login">Sign In →</button>
+          <div class="auth-footer-note" style="margin-top:14px">
+            <span style="color:var(--text3)">Demo: </span>
+            <span class="auth-link" onclick="demoLogin()">Use demo credentials</span>
+          </div>
+        </form>
 
-        <!-- Analytics Chart -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><span class="card-title-dot"></span>Donations by Blood Group</div>
-          </div>
-          <div class="card-body">
-            <div class="chart-wrap">
-              <canvas id="admin-chart"></canvas>
+        <!-- REGISTER FORM -->
+        <form class="auth-form" id="form-register" onsubmit="handleRegister(event)">
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">First Name *</label>
+              <input type="text" class="form-input" id="reg-fname" placeholder="Rahul" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Last Name *</label>
+              <input type="text" class="form-input" id="reg-lname" placeholder="Sharma" required>
             </div>
           </div>
-        </div>
-
-        <!-- System Settings -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><span class="card-title-dot"></span>System Settings</div>
+          <div class="form-group">
+            <label class="form-label">Email Address *</label>
+            <input type="email" class="form-input" id="reg-email" placeholder="you@example.com" required>
           </div>
-          <div class="card-body" style="padding:0 20px">
-            <div class="toggle-row">
-              <div class="toggle-info">
-                <div class="toggle-title">🤖 AI Matching</div>
-                <div class="toggle-sub">Auto-match donors to SOS requests</div>
-              </div>
-              <label class="toggle"><input type="checkbox" id="toggle-ai" onchange="saveSetting('ai',this.checked)"><span class="toggle-track"></span></label>
+          <div class="form-group" id="reg-blood-grp" style="display:none">
+            <label class="form-label">Blood Group</label>
+            <select class="form-select" id="reg-blood">
+              <option value="">Select blood group</option>
+              <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+              <option>O+</option><option>O-</option><option>AB+</option><option>AB-</option>
+            </select>
+          </div>
+          <div class="form-group" id="reg-role-grp" style="display:none">
+            <label class="form-label">Role</label>
+            <select class="form-select" id="reg-role">
+              <option value="donor">Donor</option>
+              <option value="patient">Patient / Family</option>
+            </select>
+          </div>
+          <div class="form-group" id="reg-hospital-grp" style="display:none">
+            <label class="form-label">Hospital Name *</label>
+            <input type="text" class="form-input" id="reg-hospital" placeholder="e.g. AIIMS Delhi">
+          </div>
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Password *</label>
+              <input type="password" class="form-input" id="reg-pass" placeholder="Min 8 chars" required>
             </div>
-            <div class="toggle-row">
-              <div class="toggle-info">
-                <div class="toggle-title">📱 SMS Alerts</div>
-                <div class="toggle-sub">Send SMS to nearby donors</div>
-              </div>
-              <label class="toggle"><input type="checkbox" id="toggle-sms" onchange="saveSetting('sms',this.checked)"><span class="toggle-track"></span></label>
-            </div>
-            <div class="toggle-row">
-              <div class="toggle-info">
-                <div class="toggle-title">✅ Auto-Verification</div>
-                <div class="toggle-sub">Verify donors after 1 donation</div>
-              </div>
-              <label class="toggle"><input type="checkbox" id="toggle-autoverify" onchange="saveSetting('autoverify',this.checked)"><span class="toggle-track"></span></label>
+            <div class="form-group">
+              <label class="form-label">Confirm *</label>
+              <input type="password" class="form-input" id="reg-confirm" placeholder="Repeat" required>
             </div>
           </div>
-        </div>
+          <div class="form-err" id="reg-pass-err" style="margin-top:-10px;margin-bottom:10px;">Passwords do not match</div>
+          <div class="form-group">
+            <label class="form-label">Phone Number</label>
+            <input type="tel" class="form-input" id="reg-phone" placeholder="+91 9XXXXXXXXX">
+          </div>
+          <button type="submit" class="btn-submit" id="btn-register">Create Account →</button>
+        </form>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- ══════════════════ HOSPITAL PANEL ══════════════════ -->
-  <div class="panel" id="panel-hospital" style="--accent:#2563eb">
-    <div class="two-col">
-      <div class="col">
-        <!-- Raise SOS -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><span class="card-title-dot" style="background:#2563eb"></span>Raise SOS Request</div>
-          </div>
-          <div class="card-body">
-            <form id="sos-form" onsubmit="submitSOS(event)">
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Blood Group *</label>
-                  <select class="form-select" id="sos-blood" required>
-                    <option value="">Select</option>
-                    <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
-                    <option>O+</option><option>O-</option><option>AB+</option><option>AB-</option>
-                  </select>
-                  <div class="form-error" id="sos-blood-err"></div>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Units Needed *</label>
-                  <input type="number" class="form-input" id="sos-units" min="1" max="20" placeholder="e.g. 3" required>
-                  <div class="form-error" id="sos-units-err"></div>
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Urgency *</label>
-                  <select class="form-select" id="sos-urgency" required>
-                    <option value="">Select</option>
-                    <option value="critical">Critical</option>
-                    <option value="high">High</option>
-                    <option value="medium">Medium</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Hospital Name *</label>
-                  <input type="text" class="form-input" id="sos-hospital" placeholder="e.g. AIIMS Delhi" required>
-                </div>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Contact Number *</label>
-                <input type="tel" class="form-input" id="sos-contact" placeholder="+91 9XXXXXXXXX" required>
-              </div>
-              <button type="submit" class="btn btn-primary btn-full" style="background:#2563eb;margin-top:4px">🚨 Raise Emergency SOS</button>
-            </form>
-          </div>
-        </div>
+<!-- ═══════════════════════════════════════════════
+     SCREEN 3: DASHBOARD
+═══════════════════════════════════════════════ -->
+<div id="screen-dashboard" class="screen">
 
-        <!-- Active Requests Tracker -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><span class="card-title-dot" style="background:#2563eb"></span>Active Request Tracker</div>
-            <button class="card-action" style="color:#60a5fa" onclick="loadHospitalRequests()">↻</button>
-          </div>
-          <div class="card-body" style="padding:0">
-            <div id="hosp-request-list" style="padding:0 20px"></div>
-          </div>
-        </div>
-
-        <!-- Request History -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><span class="card-title-dot" style="background:#2563eb"></span>Request History</div>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Date</th><th>Blood</th><th>Units</th><th>Status</th></tr></thead>
-              <tbody id="hosp-history-body"></tbody>
-            </table>
-          </div>
-        </div>
+  <!-- SIDEBAR -->
+  <nav class="dash-sidebar" id="dash-sidebar">
+    <div class="dash-logo">
+      <span class="dash-logo-icon">🩸</span>
+      <span class="dash-logo-text">Blood<em>Connect</em></span>
+    </div>
+    <div class="dash-portal-badge" id="portal-badge">🛡️ Admin Portal</div>
+    <div class="dash-nav" id="dash-nav"></div>
+    <div class="dash-user">
+      <div class="dash-avatar" id="dash-avatar">A</div>
+      <div class="dash-user-info">
+        <div class="dash-user-name" id="dash-user-name">Demo User</div>
+        <div class="dash-user-role" id="dash-user-role">Administrator</div>
       </div>
+      <button class="dash-logout" onclick="handleLogout()" title="Sign out">⎋</button>
+    </div>
+  </nav>
 
-      <div class="col">
-        <!-- Blood Inventory -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><span class="card-title-dot" style="background:#2563eb"></span>Blood Inventory</div>
-            <button class="card-action" style="color:#60a5fa" onclick="loadInventory('hosp')">↻ Refresh</button>
-          </div>
-          <div class="card-body">
-            <div class="blood-grid" id="hosp-inventory"></div>
-          </div>
-        </div>
-
-        <!-- Donor Pool Nearby Map -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><span class="card-title-dot" style="background:#2563eb"></span>Donor Pool Nearby</div>
-          </div>
-          <div class="card-body" style="padding:0 20px 16px">
-            <div class="map-container" id="map-donor-pool">
-              <div class="map-placeholder">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
-                <span>Map loading…</span>
-              </div>
-            </div>
-          </div>
-        </div>
+  <!-- MAIN -->
+  <div class="dash-main">
+    <header class="dash-topbar">
+      <div class="topbar-left">
+        <span class="topbar-title" id="topbar-title">Overview</span>
+        <div class="live-pill"><span class="live-dot"></span>LIVE</div>
       </div>
+      <div class="topbar-right">
+        <button class="topbar-sos" onclick="quickSOS()">🚨 SOS</button>
+        <div class="dash-avatar" style="width:34px;height:34px;font-size:13px" id="topbar-avatar">A</div>
+      </div>
+    </header>
+
+    <div class="dash-content" id="dash-content">
+      <!-- panels rendered dynamically -->
     </div>
   </div>
+</div>
 
-  <!-- ══════════════════ DONOR PANEL ══════════════════ -->
-  <div class="panel" id="panel-donor" style="--accent:#0d9488">
-    <div class="two-col">
-      <div class="col">
-        <!-- Profile & Availability -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><span class="card-title-dot" style="background:#0d9488"></span>My Profile & Availability</div>
-          </div>
-          <div class="card-body">
-            <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
-              <div class="avatar" style="width:50px;height:50px;font-size:18px">R</div>
-              <div>
-                <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px" id="donor-name">Rahul Sharma</div>
-                <div style="font-size:12px;color:var(--text3)">Blood Group: <strong id="donor-bg" style="color:#2dd4bf">O+</strong> · Last donated: <span id="donor-last">2 months ago</span></div>
-              </div>
-            </div>
-            <div class="toggle-row">
-              <div class="toggle-info">
-                <div class="toggle-title">Availability Status</div>
-                <div class="toggle-sub" id="avail-sub">You are currently available to donate</div>
-              </div>
-              <label class="toggle"><input type="checkbox" id="donor-avail" checked onchange="updateAvailability(this.checked)"><span class="toggle-track" style="background:var(--donor)"></span></label>
-            </div>
-          </div>
-        </div>
-
-        <!-- Incoming SOS Alerts -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><span class="card-title-dot" style="background:#e03535"></span>Incoming SOS Alerts</div>
-            <span class="badge badge-red" id="donor-sos-count">0</span>
-          </div>
-          <div class="card-body" style="padding:0 20px">
-            <div id="donor-sos-list"></div>
-          </div>
-        </div>
-
-        <!-- Donation History -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><span class="card-title-dot" style="background:#0d9488"></span>Donation History</div>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Date</th><th>Blood Group</th><th>Units</th><th>Camp</th></tr></thead>
-              <tbody id="donor-history-body"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <div class="col">
-        <!-- Trust Score -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><span class="card-title-dot" style="background:#0d9488"></span>Trust Score & Badges</div>
-          </div>
-          <div class="card-body">
-            <div class="trust-circle">
-              <div class="trust-ring">
-                <svg width="120" height="120">
-                  <circle class="trust-ring-bg" cx="60" cy="60" r="50" fill="none" stroke-width="8"/>
-                  <circle class="trust-ring-fill" cx="60" cy="60" r="50" fill="none" stroke-width="8"
-                    stroke-dasharray="314" stroke-dashoffset="79" id="trust-ring-fill"/>
-                </svg>
-                <div class="trust-value">75<span>/100</span></div>
-              </div>
-              <div style="font-size:12px;color:var(--text3)">Trusted Donor · Level 3</div>
-            </div>
-            <div class="badge-grid">
-              <div class="earned-badge unlocked"><span class="badge-icon">🩸</span><div class="badge-name">First Donation</div></div>
-              <div class="earned-badge unlocked"><span class="badge-icon">⭐</span><div class="badge-name">5x Donor</div></div>
-              <div class="earned-badge unlocked"><span class="badge-icon">🏆</span><div class="badge-name">Lifesaver</div></div>
-              <div class="earned-badge badge-locked"><span class="badge-icon">💎</span><div class="badge-name">10x Donor</div></div>
-              <div class="earned-badge badge-locked"><span class="badge-icon">🦸</span><div class="badge-name">Hero Donor</div></div>
-              <div class="earned-badge badge-locked"><span class="badge-icon">🌟</span><div class="badge-name">Legend</div></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Nearby Blood Camps -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><span class="card-title-dot" style="background:#0d9488"></span>Nearby Blood Camps</div>
-          </div>
-          <div class="card-body" style="padding-bottom:0">
-            <div class="map-container" id="map-camps" style="height:180px;margin-bottom:14px">
-              <div class="map-placeholder">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
-                <span>Loading camps…</span>
-              </div>
-            </div>
-            <div id="camps-list"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ══════════════════ PATIENT PANEL ══════════════════ -->
-  <div class="panel" id="panel-patient" style="--accent:#7c3aed">
-    <div class="two-col">
-      <div class="col">
-        <!-- SOS Form -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><span class="card-title-dot" style="background:#7c3aed"></span>Request Blood (SOS)</div>
-          </div>
-          <div class="card-body">
-            <form id="patient-sos-form" onsubmit="submitPatientSOS(event)">
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Patient Name *</label>
-                  <input type="text" class="form-input" id="pat-name" placeholder="Full name" required>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Blood Group *</label>
-                  <select class="form-select" id="pat-blood" required>
-                    <option value="">Select</option>
-                    <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
-                    <option>O+</option><option>O-</option><option>AB+</option><option>AB-</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Units Needed *</label>
-                  <input type="number" class="form-input" id="pat-units" min="1" placeholder="e.g. 2" required>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Urgency *</label>
-                  <select class="form-select" id="pat-urgency" required>
-                    <option value="">Select</option>
-                    <option value="critical">Critical</option>
-                    <option value="high">High</option>
-                    <option value="medium">Medium</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Hospital Name *</label>
-                <input type="text" class="form-input" id="pat-hospital" placeholder="Hospital name & city" required>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Contact Number *</label>
-                <input type="tel" class="form-input" id="pat-contact" placeholder="+91 9XXXXXXXXX" required>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Message (optional)</label>
-                <textarea class="form-textarea" id="pat-message" placeholder="Any additional details…"></textarea>
-              </div>
-              <button type="submit" class="btn btn-full" style="background:#7c3aed;color:white">🆘 Send SOS Request</button>
-            </form>
-          </div>
-        </div>
-
-        <!-- Request History -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><span class="card-title-dot" style="background:#7c3aed"></span>Request History</div>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Date</th><th>Blood</th><th>Units</th><th>Status</th></tr></thead>
-              <tbody id="patient-history-body"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <div class="col">
-        <!-- Live Donor Tracker -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><span class="card-title-dot" style="background:#7c3aed"></span>Live Donor Tracker</div>
-            <span class="badge badge-purple">Tracking 3 donors</span>
-          </div>
-          <div class="card-body" style="padding-bottom:8px">
-            <div class="map-container" id="map-patient" style="height:220px"></div>
-          </div>
-        </div>
-
-        <!-- Matched Donors -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><span class="card-title-dot" style="background:#7c3aed"></span>Matched Donors</div>
-          </div>
-          <div class="card-body" style="display:flex;flex-direction:column;gap:8px" id="matched-donors-list"></div>
-        </div>
-
-        <!-- Nearby Blood Banks -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><span class="card-title-dot" style="background:#7c3aed"></span>Nearby Blood Banks</div>
-          </div>
-          <div class="card-body" style="padding:0 20px 8px">
-            <div id="blood-banks-list"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ══════════════════ NGO PANEL ══════════════════ -->
-  <div class="panel" id="panel-ngo" style="--accent:#b45309">
-    <div class="two-col">
-      <div class="col">
-        <!-- Create Camp Form -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><span class="card-title-dot" style="background:#b45309"></span>Create Blood Camp</div>
-          </div>
-          <div class="card-body">
-            <form id="camp-form" onsubmit="submitCamp(event)">
-              <div class="form-group">
-                <label class="form-label">Camp Name *</label>
-                <input type="text" class="form-input" id="camp-name" placeholder="e.g. AIIMS Blood Drive" required>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Date *</label>
-                  <input type="date" class="form-input" id="camp-date" required>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">City *</label>
-                  <input type="text" class="form-input" id="camp-city" placeholder="e.g. New Delhi" required>
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Start Time</label>
-                  <input type="time" class="form-input" id="camp-start">
-                </div>
-                <div class="form-group">
-                  <label class="form-label">End Time</label>
-                  <input type="time" class="form-input" id="camp-end">
-                </div>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Address *</label>
-                <input type="text" class="form-input" id="camp-address" placeholder="Full address" required>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Expected Donors</label>
-                <input type="number" class="form-input" id="camp-expected" placeholder="e.g. 50" min="1">
-              </div>
-              <button type="submit" class="btn btn-full" style="background:#b45309;color:white;margin-top:4px">📅 Schedule Camp</button>
-            </form>
-          </div>
-        </div>
-
-        <!-- Manage Registrations -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><span class="card-title-dot" style="background:#b45309"></span>Manage Registrations</div>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Donor</th><th>Blood Group</th><th>Phone</th><th>Check-in</th></tr></thead>
-              <tbody id="registrations-body"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <div class="col">
-        <!-- AI Location Suggestions -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><span class="card-title-dot" style="background:#b45309"></span>AI Location Suggestions</div>
-            <button class="btn btn-sm" style="background:#b45309;color:white" onclick="loadSuggestions()">✨ Suggest</button>
-          </div>
-          <div class="card-body" style="display:flex;flex-direction:column;gap:10px" id="ai-suggestions">
-            <div style="color:var(--text3);font-size:13px;text-align:center;padding:20px">Click "Suggest" to get AI-powered location recommendations</div>
-          </div>
-        </div>
-
-        <!-- Camp Analytics -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><span class="card-title-dot" style="background:#b45309"></span>Camp Analytics</div>
-          </div>
-          <div class="card-body">
-            <div class="chart-wrap">
-              <canvas id="ngo-chart"></canvas>
-            </div>
-          </div>
-        </div>
-
-        <!-- Donor Reach Report -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><span class="card-title-dot" style="background:#b45309"></span>Donor Reach Report</div>
-          </div>
-          <div class="card-body">
-            <div class="stats-row" style="grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:0">
-              <div class="stat-card" style="--accent:#b45309;padding:14px">
-                <span class="stat-icon" style="font-size:16px;margin-bottom:6px">📋</span>
-                <div class="stat-value" style="font-size:22px">247</div>
-                <div class="stat-label">Total Registered</div>
-              </div>
-              <div class="stat-card" style="--accent:#22c55e;padding:14px">
-                <span class="stat-icon" style="font-size:16px;margin-bottom:6px">✅</span>
-                <div class="stat-value" style="font-size:22px">189</div>
-                <div class="stat-label">Checked In</div>
-              </div>
-              <div class="stat-card" style="--accent:#2563eb;padding:14px">
-                <span class="stat-icon" style="font-size:16px;margin-bottom:6px">🩸</span>
-                <div class="stat-value" style="font-size:22px">172</div>
-                <div class="stat-label">Units Collected</div>
-              </div>
-              <div class="stat-card" style="--accent:#0d9488;padding:14px">
-                <span class="stat-icon" style="font-size:16px;margin-bottom:6px">🆕</span>
-                <div class="stat-value" style="font-size:22px">63</div>
-                <div class="stat-label">New Donors</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ══════════════════ BLOOD BANK PANEL ══════════════════ -->
-  <div class="panel" id="panel-bank" style="--accent:#15803d">
-    <div class="two-col">
-      <div class="col">
-        <!-- Stock Levels -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><span class="card-title-dot" style="background:#15803d"></span>Stock Levels by Blood Group</div>
-            <button class="card-action" style="color:#4ade80" onclick="loadInventory('bank')">↻ Refresh</button>
-          </div>
-          <div class="card-body">
-            <div class="blood-grid" id="bank-inventory"></div>
-          </div>
-        </div>
-
-        <!-- Incoming Requests -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><span class="card-title-dot" style="background:#15803d"></span>Incoming Requests</div>
-            <span class="badge badge-amber" id="incoming-count">—</span>
-          </div>
-          <div class="card-body" style="padding:0 20px">
-            <div id="incoming-requests-list"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="col">
-        <!-- Hospital Connections -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><span class="card-title-dot" style="background:#15803d"></span>Hospital Connections</div>
-          </div>
-          <div class="card-body" style="padding:0 20px">
-            <div id="hospital-connections-list"></div>
-          </div>
-        </div>
-
-        <!-- Shortage Alerts -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><span class="card-title-dot" style="background:#e03535"></span>Shortage Alerts</div>
-          </div>
-          <div class="card-body" style="display:flex;flex-direction:column;gap:8px" id="shortage-list"></div>
-        </div>
-
-        <!-- Expiry Tracker -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><span class="card-title-dot" style="background:#b45309"></span>Expiry Tracker</div>
-            <span class="badge badge-amber">Within 7 days</span>
-          </div>
-          <div class="card-body" style="padding:0 20px">
-            <div id="expiry-list"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-</main>
-
-<!-- TOAST CONTAINER -->
-<div id="toast-container"></div>
+<!-- TOASTS -->
+<div id="toasts"></div>
 
 <script>
-// ═══════════════════════════════════════════════════════
-// SUPABASE INIT
-// ═══════════════════════════════════════════════════════
-const { createClient } = supabase;
+/* ═══════════════════════════════════════════
+   SUPABASE
+═══════════════════════════════════════════ */
+const {createClient} = supabase;
 const sb = createClient(
   'https://fbkgvbacbsomrnbbaedb.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZia2d2YmFjYnNvbXJuYmJhZWRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MjM4NjgsImV4cCI6MjA4OTk5OTg2OH0.fU20RIfAtCFYpG9doTxGx2k9iWBnRqPGS3jI2ovLcMQ'
 );
 
-let isDemo = false;
-
-// ═══════════════════════════════════════════════════════
-// MOCK DATA
-// ═══════════════════════════════════════════════════════
-const MOCK = {
-  profiles: [
+/* ═══════════════════════════════════════════
+   MOCK DATA
+═══════════════════════════════════════════ */
+const M = {
+  profiles:[
     {id:'u1',name:'Priya Sharma',role:'donor',blood_group:'O+',verified:true,available:true,trust_score:85,created_at:'2024-01-15',lat:28.6139,lng:77.2090},
-    {id:'u2',name:'Raj Kumar',role:'hospital',blood_group:null,verified:true,available:false,trust_score:null,created_at:'2024-02-01',lat:28.5355,lng:77.3910},
-    {id:'u3',name:'Anita Desai',role:'donor',blood_group:'B+',verified:false,available:true,trust_score:45,created_at:'2024-03-10',lat:28.7041,lng:77.1025},
-    {id:'u4',name:'Vikram Singh',role:'donor',blood_group:'A-',verified:true,available:false,trust_score:92,created_at:'2024-01-20',lat:28.4595,lng:77.0266},
-    {id:'u5',name:'Meera Nair',role:'ngo',blood_group:null,verified:true,available:false,trust_score:null,created_at:'2024-02-28',lat:28.6304,lng:77.2177},
-    {id:'u6',name:'Arjun Patel',role:'donor',blood_group:'AB+',verified:false,available:true,trust_score:30,created_at:'2024-04-05',lat:28.5672,lng:77.3219},
-    {id:'u7',name:'Sunita Rao',role:'patient',blood_group:'O-',verified:false,available:false,trust_score:null,created_at:'2024-03-22',lat:28.6562,lng:77.2410},
-    {id:'u8',name:'Deepak Gupta',role:'donor',blood_group:'B-',verified:true,available:true,trust_score:77,created_at:'2024-01-08',lat:28.5924,lng:77.1837},
-    {id:'u9',name:'Kavya Reddy',role:'donor',blood_group:'A+',verified:false,available:true,trust_score:55,created_at:'2024-04-12',lat:28.6271,lng:77.2193},
-    {id:'u10',name:'Rohit Mishra',role:'hospital',blood_group:null,verified:true,available:false,trust_score:null,created_at:'2024-02-14',lat:28.6448,lng:77.2167},
-    {id:'u11',name:'Pooja Iyer',role:'donor',blood_group:'O+',verified:true,available:true,trust_score:88,created_at:'2024-01-30',lat:28.5015,lng:77.4041},
-    {id:'u12',name:'Aakash Jain',role:'donor',blood_group:'AB-',verified:false,available:false,trust_score:20,created_at:'2024-04-18',lat:28.7182,lng:77.1025},
+    {id:'u2',name:'Raj Kumar',role:'hospital',blood_group:null,verified:true,available:false,trust_score:null,created_at:'2024-02-01'},
+    {id:'u3',name:'Anita Desai',role:'donor',blood_group:'B+',verified:false,available:true,trust_score:45,created_at:'2024-03-10'},
+    {id:'u4',name:'Vikram Singh',role:'donor',blood_group:'A-',verified:true,available:false,trust_score:92,created_at:'2024-01-20'},
+    {id:'u5',name:'Meera Nair',role:'ngo',blood_group:null,verified:true,available:false,trust_score:null,created_at:'2024-02-28'},
+    {id:'u6',name:'Arjun Patel',role:'donor',blood_group:'AB+',verified:false,available:true,trust_score:30,created_at:'2024-04-05'},
+    {id:'u7',name:'Sunita Rao',role:'patient',blood_group:'O-',verified:false,available:false,trust_score:null,created_at:'2024-03-22'},
+    {id:'u8',name:'Deepak Gupta',role:'donor',blood_group:'B-',verified:true,available:true,trust_score:77,created_at:'2024-01-08'},
+    {id:'u9',name:'Kavya Reddy',role:'donor',blood_group:'A+',verified:false,available:true,trust_score:55,created_at:'2024-04-12'},
+    {id:'u10',name:'Rohit Mishra',role:'hospital',blood_group:null,verified:true,available:false,trust_score:null,created_at:'2024-02-14'},
+    {id:'u11',name:'Pooja Iyer',role:'donor',blood_group:'O+',verified:true,available:true,trust_score:88,created_at:'2024-01-30'},
+    {id:'u12',name:'Aakash Jain',role:'donor',blood_group:'AB-',verified:false,available:false,trust_score:20,created_at:'2024-04-18'},
   ],
-  sos_requests: [
-    {id:'s1',blood_group:'O-',units:3,urgency:'critical',hospital_name:'AIIMS Delhi',contact:'+91 9876543210',status:'active',requester_id:'u7',created_at:'2024-04-18T09:30:00Z'},
-    {id:'s2',blood_group:'B+',units:2,urgency:'high',hospital_name:'Apollo Hospitals',contact:'+91 9812345678',status:'active',requester_id:'u2',created_at:'2024-04-18T08:15:00Z'},
-    {id:'s3',blood_group:'A+',units:4,urgency:'medium',hospital_name:'Fortis Healthcare',contact:'+91 9867543210',status:'matched',requester_id:'u2',created_at:'2024-04-17T14:20:00Z'},
-    {id:'s4',blood_group:'AB+',units:1,urgency:'critical',hospital_name:'Max Hospital',contact:'+91 9800012345',status:'active',requester_id:'u10',created_at:'2024-04-18T07:00:00Z'},
-    {id:'s5',blood_group:'O+',units:5,urgency:'high',hospital_name:'Safdarjung Hospital',contact:'+91 9755123456',status:'fulfilled',requester_id:'u2',created_at:'2024-04-16T11:30:00Z'},
-    {id:'s6',blood_group:'B-',units:2,urgency:'high',hospital_name:'RML Hospital',contact:'+91 9988776655',status:'pending',requester_id:'u10',created_at:'2024-04-18T06:45:00Z'},
+  sos_requests:[
+    {id:'s1',blood_group:'O-',units:3,urgency:'critical',hospital_name:'AIIMS Delhi',contact:'+91 9876543210',status:'active',created_at:'2024-04-18T09:30:00Z'},
+    {id:'s2',blood_group:'B+',units:2,urgency:'high',hospital_name:'Apollo Hospitals',contact:'+91 9812345678',status:'active',created_at:'2024-04-18T08:15:00Z'},
+    {id:'s3',blood_group:'A+',units:4,urgency:'medium',hospital_name:'Fortis Healthcare',contact:'+91 9867543210',status:'matched',created_at:'2024-04-17T14:20:00Z'},
+    {id:'s4',blood_group:'AB+',units:1,urgency:'critical',hospital_name:'Max Hospital',contact:'+91 9800012345',status:'active',created_at:'2024-04-18T07:00:00Z'},
+    {id:'s5',blood_group:'O+',units:5,urgency:'high',hospital_name:'Safdarjung Hospital',contact:'+91 9755123456',status:'fulfilled',created_at:'2024-04-16T11:30:00Z'},
+    {id:'s6',blood_group:'B-',units:2,urgency:'high',hospital_name:'RML Hospital',contact:'+91 9988776655',status:'pending',created_at:'2024-04-18T06:45:00Z'},
   ],
-  donations: [
-    {id:'d1',donor_id:'u1',blood_group:'O+',units:1,donation_date:'2024-02-14',camp_id:'c1'},
-    {id:'d2',donor_id:'u4',blood_group:'A-',units:1,donation_date:'2024-01-20',camp_id:'c2'},
-    {id:'d3',donor_id:'u8',blood_group:'B-',units:1,donation_date:'2024-03-05',camp_id:'c1'},
-    {id:'d4',donor_id:'u1',blood_group:'O+',units:1,donation_date:'2024-04-01',camp_id:'c3'},
-    {id:'d5',donor_id:'u11',blood_group:'O+',units:1,donation_date:'2024-03-28',camp_id:'c3'},
-    {id:'d6',donor_id:'u4',blood_group:'A-',units:1,donation_date:'2024-04-10',camp_id:'c2'},
-    {id:'d7',donor_id:'u8',blood_group:'B-',units:1,donation_date:'2024-04-15',camp_id:'c3'},
-    {id:'d8',donor_id:'u11',blood_group:'O+',units:1,donation_date:'2024-04-16',camp_id:'c1'},
+  donations:[
+    {id:'d1',donor_id:'u1',blood_group:'O+',units:1,donation_date:'2024-02-14'},
+    {id:'d2',donor_id:'u4',blood_group:'A-',units:1,donation_date:'2024-01-20'},
+    {id:'d3',donor_id:'u8',blood_group:'B-',units:1,donation_date:'2024-03-05'},
+    {id:'d4',donor_id:'u1',blood_group:'O+',units:1,donation_date:'2024-04-01'},
+    {id:'d5',donor_id:'u11',blood_group:'O+',units:1,donation_date:'2024-03-28'},
   ],
-  blood_inventory: [
-    {id:'i1',blood_group:'A+',units:22,expiry_date:'2024-05-10',blood_bank_id:'bb1'},
-    {id:'i2',blood_group:'A-',units:8,expiry_date:'2024-04-25',blood_bank_id:'bb1'},
-    {id:'i3',blood_group:'B+',units:15,expiry_date:'2024-04-26',blood_bank_id:'bb1'},
-    {id:'i4',blood_group:'B-',units:3,expiry_date:'2024-04-22',blood_bank_id:'bb1'},
-    {id:'i5',blood_group:'O+',units:30,expiry_date:'2024-05-15',blood_bank_id:'bb1'},
-    {id:'i6',blood_group:'O-',units:2,expiry_date:'2024-04-20',blood_bank_id:'bb1'},
-    {id:'i7',blood_group:'AB+',units:12,expiry_date:'2024-05-02',blood_bank_id:'bb1'},
-    {id:'i8',blood_group:'AB-',units:5,expiry_date:'2024-04-28',blood_bank_id:'bb1'},
+  blood_inventory:[
+    {id:'i1',blood_group:'A+',units:22,expiry_date:'2024-05-10'},
+    {id:'i2',blood_group:'A-',units:8,expiry_date:'2024-04-25'},
+    {id:'i3',blood_group:'B+',units:15,expiry_date:'2024-04-26'},
+    {id:'i4',blood_group:'B-',units:3,expiry_date:'2024-04-22'},
+    {id:'i5',blood_group:'O+',units:30,expiry_date:'2024-05-15'},
+    {id:'i6',blood_group:'O-',units:2,expiry_date:'2024-04-20'},
+    {id:'i7',blood_group:'AB+',units:12,expiry_date:'2024-05-02'},
+    {id:'i8',blood_group:'AB-',units:5,expiry_date:'2024-04-28'},
   ],
-  blood_camps: [
+  blood_camps:[
     {id:'c1',name:'Red Cross Drive — Delhi',date:new Date().toISOString().slice(0,10),start_time:'09:00',end_time:'17:00',address:'India Gate Lawns, New Delhi',city:'New Delhi',lat:28.6129,lng:77.2295,expected_donors:80},
     {id:'c2',name:'AIIMS Blood Donation',date:'2024-04-20',start_time:'10:00',end_time:'16:00',address:'AIIMS Campus, Ansari Nagar',city:'New Delhi',lat:28.5672,lng:77.2100,expected_donors:100},
     {id:'c3',name:'Noida Blood Bank Camp',date:'2024-04-22',start_time:'08:00',end_time:'18:00',address:'Sector 18, Noida',city:'Noida',lat:28.5696,lng:77.3211,expected_donors:60},
   ],
-  camp_registrations: [
-    {id:'r1',camp_id:'c1',donor_id:'u1',checked_in:true},
-    {id:'r2',camp_id:'c1',donor_id:'u4',checked_in:false},
-    {id:'r3',camp_id:'c1',donor_id:'u8',checked_in:true},
-    {id:'r4',camp_id:'c2',donor_id:'u11',checked_in:false},
-    {id:'r5',camp_id:'c3',donor_id:'u9',checked_in:false},
-  ],
-  blood_banks: [
-    {id:'bb1',name:'AIIMS Blood Bank',address:'Ansari Nagar, New Delhi',phone:'+91 11 2659 3308',lat:28.5672,lng:77.2100},
-    {id:'bb2',name:'Red Cross Society Delhi',address:'Connaught Place, New Delhi',phone:'+91 11 2331 5530',lat:28.6315,lng:77.2167},
-    {id:'bb3',name:'Apollo Blood Centre',address:'Sarita Vihar, New Delhi',phone:'+91 11 2987 1000',lat:28.5355,lng:77.2910},
-  ],
-  hospitals: [
+  hospitals:[
     {id:'h1',name:'AIIMS Delhi',address:'Ansari Nagar, New Delhi',connected:true},
     {id:'h2',name:'Apollo Hospitals',address:'Sarita Vihar, New Delhi',connected:true},
     {id:'h3',name:'Fortis Healthcare',address:'Shalimar Bagh, New Delhi',connected:false},
     {id:'h4',name:'Max Hospital',address:'Saket, New Delhi',connected:true},
-    {id:'h5',name:'Safdarjung Hospital',address:'Ansari Nagar W, New Delhi',connected:false},
-  ]
+  ],
+  blood_banks:[
+    {id:'bb1',name:'AIIMS Blood Bank',address:'Ansari Nagar, New Delhi',phone:'+91 11 2659 3308',lat:28.5672,lng:77.2100},
+    {id:'bb2',name:'Red Cross Society Delhi',address:'Connaught Place, New Delhi',phone:'+91 11 2331 5530',lat:28.6315,lng:77.2167},
+    {id:'bb3',name:'Apollo Blood Centre',address:'Sarita Vihar, New Delhi',phone:'+91 11 2987 1000',lat:28.5355,lng:77.2910},
+  ],
 };
 
-// ═══════════════════════════════════════════════════════
-// PANEL STATE
-// ═══════════════════════════════════════════════════════
-const PANEL_CONFIG = {
-  admin:    {title:'Admin Panel',    color:'#c0392b'},
-  hospital: {title:'Hospital Panel', color:'#2563eb'},
-  donor:    {title:'Donor Panel',    color:'#0d9488'},
-  patient:  {title:'Patient / Family Panel', color:'#7c3aed'},
-  ngo:      {title:'NGO / Camp Organizer',  color:'#b45309'},
-  bank:     {title:'Blood Bank Panel', color:'#15803d'},
+/* ═══════════════════════════════════════════
+   APP STATE
+═══════════════════════════════════════════ */
+let currentPortal = 'admin';
+let currentUser = null;
+let currentTab = '';
+let charts = {};
+
+const PORTAL_CFG = {
+  admin: {
+    label:'Admin Portal', icon:'🛡️', color:'#dc2626', glow:'rgba(220,38,38,0.12)',
+    nav: [
+      {section:'OVERVIEW', items:[
+        {id:'overview', icon:'📊', label:'Dashboard'},
+        {id:'users', icon:'👥', label:'User Management', badge:()=>M.profiles.filter(p=>!p.verified).length},
+        {id:'verif', icon:'✅', label:'Verification Queue'},
+      ]},
+      {section:'OPERATIONS', items:[
+        {id:'sos', icon:'🚨', label:'Active SOS', badge:()=>M.sos_requests.filter(r=>r.status==='active').length},
+        {id:'analytics', icon:'📈', label:'Analytics'},
+        {id:'settings', icon:'⚙️', label:'System Settings'},
+      ]},
+    ],
+    defaultTab: 'overview',
+  },
+  hospital: {
+    label:'Hospital Portal', icon:'🏥', color:'#2563eb', glow:'rgba(37,99,235,0.12)',
+    nav: [
+      {section:'REQUESTS', items:[
+        {id:'h-overview', icon:'📊', label:'Dashboard'},
+        {id:'h-sos', icon:'🚨', label:'Raise SOS'},
+        {id:'h-tracker', icon:'📍', label:'Request Tracker', badge:()=>M.sos_requests.filter(r=>r.status==='active').length},
+      ]},
+      {section:'RESOURCES', items:[
+        {id:'h-inventory', icon:'🩸', label:'Blood Inventory'},
+        {id:'h-donors', icon:'👤', label:'Donor Pool'},
+        {id:'h-history', icon:'📋', label:'Request History'},
+      ]},
+    ],
+    defaultTab: 'h-overview',
+  },
+  user: {
+    label:'User Portal', icon:'❤️', color:'#0d9488', glow:'rgba(13,148,136,0.12)',
+    nav: [
+      {section:'MY ACCOUNT', items:[
+        {id:'u-profile', icon:'👤', label:'My Profile'},
+        {id:'u-alerts', icon:'🚨', label:'SOS Alerts', badge:()=>M.sos_requests.filter(r=>r.status==='active').length},
+        {id:'u-history', icon:'📋', label:'Donation History'},
+      ]},
+      {section:'COMMUNITY', items:[
+        {id:'u-request', icon:'🆘', label:'Request Blood'},
+        {id:'u-camps', icon:'🏕️', label:'Blood Camps'},
+        {id:'u-banks', icon:'🏥', label:'Blood Banks'},
+      ]},
+    ],
+    defaultTab: 'u-profile',
+  },
 };
 
-let currentPanel = 'admin';
-
-function switchPanel(name, el) {
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('panel-' + name).classList.add('active');
-  el.classList.add('active');
-  currentPanel = name;
-  const cfg = PANEL_CONFIG[name];
-  document.getElementById('panel-title-text').textContent = cfg.title;
-  document.getElementById('panel-dot').style.background = cfg.color;
-  loadPanel(name);
+/* ═══════════════════════════════════════════
+   SCREEN ROUTING
+═══════════════════════════════════════════ */
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
 }
 
-// ═══════════════════════════════════════════════════════
-// TOAST
-// ═══════════════════════════════════════════════════════
-function toast(msg, type='success') {
-  const c = document.getElementById('toast-container');
-  const t = document.createElement('div');
-  t.className = `toast ${type}`;
-  const icons = {success:'✅',error:'❌',info:'ℹ️'};
-  t.innerHTML = `<span>${icons[type]||'📢'}</span><span>${msg}</span>`;
-  c.appendChild(t);
-  setTimeout(() => {
-    t.style.animation = 'toast-out 0.3s ease forwards';
-    setTimeout(() => t.remove(), 300);
-  }, 3200);
+function goToAuth(portal){
+  currentPortal = portal;
+  const cfg = PORTAL_CFG[portal];
+  // Set portal theme
+  const authEl = document.getElementById('screen-auth');
+  authEl.setAttribute('data-portal-theme', portal);
+  document.getElementById('auth-portal-tag').textContent = cfg.icon+' '+cfg.label;
+  document.getElementById('auth-portal-tag').style.cssText =
+    `color:${cfg.color};border-color:${cfg.color}40;background:${cfg.glow}`;
+
+  // Show blood group for user portal register
+  document.getElementById('reg-blood-grp').style.display = portal==='user'?'block':'none';
+  document.getElementById('reg-role-grp').style.display = portal==='user'?'block':'none';
+  document.getElementById('reg-hospital-grp').style.display = portal==='hospital'?'block':'none';
+
+  switchAuthTab('login');
+  showScreen('auth');
 }
 
-// ═══════════════════════════════════════════════════════
-// SUPABASE FETCH w/ FALLBACK
-// ═══════════════════════════════════════════════════════
-async function fetchTable(table, opts={}) {
-  try {
-    let q = sb.from(table).select(opts.select || '*');
-    if (opts.eq) for (const [k,v] of Object.entries(opts.eq)) q = q.eq(k,v);
-    if (opts.order) q = q.order(opts.order, {ascending: opts.asc !== false});
-    const {data, error} = await q;
-    if (error || !data || data.length === 0) throw error || new Error('empty');
-    return data;
-  } catch(e) {
-    if (!isDemo) {
-      isDemo = true;
-      document.getElementById('demo-badge').style.display = '';
-    }
-    return MOCK[table] || [];
+function goBack(){showScreen('landing');}
+
+function switchAuthTab(tab){
+  document.querySelectorAll('.auth-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.auth-form').forEach(f=>f.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.getElementById('form-'+tab).classList.add('active');
+}
+
+/* ═══════════════════════════════════════════
+   AUTH HANDLERS
+═══════════════════════════════════════════ */
+async function handleLogin(e){
+  e.preventDefault();
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  if(!email||!pass){toast('Please fill all fields','err');return;}
+  const btn = document.getElementById('btn-login');
+  btn.disabled=true; btn.textContent='Signing in…';
+
+  try{
+    const {data,error} = await sb.auth.signInWithPassword({email,password:pass});
+    if(error) throw error;
+    currentUser = {name:email.split('@')[0], email, role:currentPortal};
+  }catch(err){
+    // Demo fallback
+    currentUser = {name:'Demo '+PORTAL_CFG[currentPortal].label.split(' ')[0], email, role:currentPortal};
   }
+  btn.disabled=false; btn.textContent='Sign In →';
+  enterDashboard();
 }
 
-async function insertRow(table, row) {
-  try {
-    const {error} = await sb.from(table).insert([row]);
-    if (error) throw error;
-    return true;
-  } catch(e) {
-    return false;
+async function handleRegister(e){
+  e.preventDefault();
+  const fname=document.getElementById('reg-fname').value.trim();
+  const lname=document.getElementById('reg-lname').value.trim();
+  const email=document.getElementById('reg-email').value.trim();
+  const pass=document.getElementById('reg-pass').value;
+  const confirm=document.getElementById('reg-confirm').value;
+  if(pass!==confirm){
+    document.getElementById('reg-pass-err').classList.add('show');
+    return;
   }
+  document.getElementById('reg-pass-err').classList.remove('show');
+  const btn=document.getElementById('btn-register');
+  btn.disabled=true;btn.textContent='Creating account…';
+
+  try{
+    const {data,error} = await sb.auth.signUp({email,password:pass,options:{data:{name:fname+' '+lname}}});
+    if(error) throw error;
+  }catch(err){}
+
+  currentUser = {name:fname+' '+lname, email, role:currentPortal};
+  btn.disabled=false;btn.textContent='Create Account →';
+  toast('Account created! Welcome to BloodConnect 🩸','succ');
+  setTimeout(()=>enterDashboard(),800);
 }
 
-// ═══════════════════════════════════════════════════════
-// LOAD PANEL
-// ═══════════════════════════════════════════════════════
-function loadPanel(name) {
-  const loaders = {
-    admin: loadAdminPanel,
-    hospital: loadHospitalPanel,
-    donor: loadDonorPanel,
-    patient: loadPatientPanel,
-    ngo: loadNGOPanel,
-    bank: loadBankPanel,
+function demoLogin(){
+  document.getElementById('login-email').value='demo@bloodconnect.in';
+  document.getElementById('login-pass').value='demo1234';
+  setTimeout(()=>document.getElementById('form-login').requestSubmit(),200);
+}
+
+function handleLogout(){
+  sb.auth.signOut();
+  currentUser=null;
+  Object.values(charts).forEach(c=>{try{c.destroy();}catch(e){}});
+  charts={};
+  showScreen('landing');
+}
+
+/* ═══════════════════════════════════════════
+   DASHBOARD INIT
+═══════════════════════════════════════════ */
+function enterDashboard(){
+  const cfg = PORTAL_CFG[currentPortal];
+
+  // Theme
+  const ds = document.getElementById('screen-dashboard');
+  ds.setAttribute('data-portal-theme', currentPortal);
+
+  // Sidebar badge
+  document.getElementById('portal-badge').textContent = cfg.icon+' '+cfg.label;
+
+  // User info
+  const uname = currentUser?.name || 'Demo User';
+  document.getElementById('dash-user-name').textContent = uname;
+  document.getElementById('dash-user-role').textContent = cfg.label;
+  document.getElementById('dash-avatar').textContent = uname[0].toUpperCase();
+  document.getElementById('topbar-avatar').textContent = uname[0].toUpperCase();
+
+  // Build nav
+  buildNav(cfg);
+
+  // Show dashboard
+  showScreen('dashboard');
+
+  // Load default tab
+  switchTab(cfg.defaultTab);
+}
+
+function buildNav(cfg){
+  const nav = document.getElementById('dash-nav');
+  nav.innerHTML = cfg.nav.map(section=>`
+    <div class="nav-section">${section.section}</div>
+    ${section.items.map(item=>{
+      const badge = item.badge ? item.badge() : 0;
+      return `<button class="nav-btn" id="nav-${item.id}" onclick="switchTab('${item.id}')">
+        <span class="nav-btn-icon">${item.icon}</span>
+        <span>${item.label}</span>
+        ${badge>0?`<span class="nav-btn-badge">${badge}</span>`:''}
+      </button>`;
+    }).join('')}
+  `).join('');
+}
+
+function switchTab(id){
+  currentTab=id;
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  const nb=document.getElementById('nav-'+id);
+  if(nb) nb.classList.add('active');
+
+  // Find label
+  const cfg=PORTAL_CFG[currentPortal];
+  let label='';
+  cfg.nav.forEach(s=>s.items.forEach(i=>{if(i.id===id)label=i.label;}));
+  document.getElementById('topbar-title').textContent=label||'Dashboard';
+
+  // Render
+  renderTab(id);
+}
+
+/* ═══════════════════════════════════════════
+   TAB RENDERER
+═══════════════════════════════════════════ */
+function renderTab(id){
+  const content=document.getElementById('dash-content');
+  const renders = {
+    // ADMIN
+    'overview':renderAdminOverview,
+    'users':renderAdminUsers,
+    'verif':renderAdminVerif,
+    'sos':renderAdminSOS,
+    'analytics':renderAdminAnalytics,
+    'settings':renderAdminSettings,
+    // HOSPITAL
+    'h-overview':renderHospOverview,
+    'h-sos':renderHospSOS,
+    'h-tracker':renderHospTracker,
+    'h-inventory':renderHospInventory,
+    'h-donors':renderHospDonors,
+    'h-history':renderHospHistory,
+    // USER
+    'u-profile':renderUserProfile,
+    'u-alerts':renderUserAlerts,
+    'u-history':renderUserHistory,
+    'u-request':renderUserRequest,
+    'u-camps':renderUserCamps,
+    'u-banks':renderUserBanks,
   };
-  if (loaders[name]) loaders[name]();
+  if(renders[id]) renders[id](content);
 }
 
-// ═══════════════════════════════════════════════════════
-// ADMIN PANEL
-// ═══════════════════════════════════════════════════════
-let allUsers = [], usersPage = 1;
-const usersPerPage = 10;
+/* ═══════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════ */
+const fmtD=d=>{if(!d)return'—';return new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});};
+const fmtAgo=d=>{if(!d)return'—';const m=Math.floor((Date.now()-new Date(d))/60000);if(m<1)return'just now';if(m<60)return m+'m ago';if(m<1440)return Math.floor(m/60)+'h ago';return Math.floor(m/1440)+'d ago';};
+const urg={critical:'b-red',high:'b-amber',medium:'b-blue'};
+const sta={active:'b-red',pending:'b-amber',matched:'b-blue',fulfilled:'b-green'};
+const empt=msg=>`<div class="empty"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 9h6M9 12h4M9 15h3"/></svg><span>${msg}</span></div>`;
 
-async function loadAdminPanel() {
-  await Promise.all([
-    loadAdminStats(),
-    loadUsers(),
-    loadAdminSOS(),
-    loadAdminChart(),
-    loadSettings(),
-  ]);
+function bloodGrid(inv){
+  const groups=['A+','A-','B+','B-','O+','O-','AB+','AB-'];
+  return '<div class="blood-grid">'+groups.map(g=>{
+    const it=inv.find(i=>i.blood_group===g);
+    const u=it?it.units:(Math.floor(Math.random()*35)+2);
+    const cls=u<5?'crit':u<=15?'warn':'good';
+    const fc=u<5?'#f87171':u<=15?'#fbbf24':'#4ade80';
+    return `<div class="blood-c ${cls}"><div class="blood-type">${g}</div><div class="blood-units">${u}</div><div class="blood-lbl">units</div><div class="mini-prog"><div class="mini-prog-fill" style="width:${Math.min(100,(u/50)*100)}%;background:${fc}"></div></div></div>`;
+  }).join('')+'</div>';
 }
 
-async function loadAdminStats() {
-  const [profiles, sos, camps] = await Promise.all([
-    fetchTable('profiles'),
-    fetchTable('sos_requests'),
-    fetchTable('blood_camps'),
-  ]);
-  const today = new Date().toISOString().slice(0,10);
-  document.getElementById('stat-users').textContent = profiles.length;
-  document.getElementById('stat-sos').textContent = sos.filter(r=>r.status==='active').length;
-  document.getElementById('stat-donors').textContent = profiles.filter(p=>p.role==='donor'&&p.verified).length;
-  document.getElementById('stat-camps').textContent = camps.filter(c=>c.date===today).length;
-}
-
-async function loadUsers() {
-  allUsers = await fetchTable('profiles');
-  usersPage = 1;
-  renderUsersTable();
-
-  const unverified = allUsers.filter(u=>u.role==='donor'&&!u.verified);
-  document.getElementById('unverified-count').textContent = unverified.length;
-  renderVerificationQueue(unverified);
-}
-
-function filterUsers() {
-  const q = document.getElementById('user-search').value.toLowerCase();
-  const r = document.getElementById('user-role-filter').value;
-  const filtered = allUsers.filter(u =>
-    (u.name.toLowerCase().includes(q)||u.role.toLowerCase().includes(q)) &&
-    (!r || u.role===r)
-  );
-  usersPage = 1;
-  renderUsersTable(filtered);
-}
-
-function renderUsersTable(users) {
-  users = users || allUsers;
-  const total = users.length;
-  const start = (usersPage-1)*usersPerPage;
-  const page = users.slice(start, start+usersPerPage);
-  const roleColors = {admin:'badge-red',donor:'badge-green',hospital:'badge-blue',patient:'badge-purple',ngo:'badge-amber'};
-  const tbody = document.getElementById('user-table-body');
-  if (!page.length) {
-    tbody.innerHTML = `<tr><td colspan="5">${emptyState('No users found')}</td></tr>`;
-  } else {
-    tbody.innerHTML = page.map(u => `
-      <tr>
-        <td><strong>${u.name}</strong></td>
-        <td><span class="badge ${roleColors[u.role]||'badge-gray'}">${u.role}</span></td>
-        <td>${u.verified ? '<span class="badge badge-green">✅ Verified</span>' : '<span class="badge badge-gray">Pending</span>'}</td>
-        <td style="color:var(--text3)">${fmtDate(u.created_at)}</td>
-        <td>
-          ${!u.verified ? `<button class="btn btn-sm btn-primary" onclick="approveUser('${u.id}')">Approve</button>` : ''}
-          <button class="btn btn-sm btn-danger" style="margin-left:4px" onclick="toast('User action sent','info')">Reject</button>
-        </td>
-      </tr>
-    `).join('');
-  }
-  const totalPages = Math.ceil(total/usersPerPage)||1;
-  document.getElementById('user-page-info').textContent = `${start+1}–${Math.min(start+usersPerPage,total)} of ${total}`;
-  const btns = document.getElementById('user-page-btns');
-  btns.innerHTML = Array.from({length:totalPages},(_,i)=>`
-    <button class="page-btn ${i+1===usersPage?'active':''}" onclick="goUserPage(${i+1})">${i+1}</button>
-  `).join('');
-}
-
-function goUserPage(p) { usersPage = p; renderUsersTable(); }
-
-async function approveUser(id) {
-  try { await sb.from('profiles').update({verified:true}).eq('id',id); } catch(e) {}
-  const u = allUsers.find(x=>x.id===id);
-  if (u) u.verified = true;
-  toast('User approved!', 'success');
-  renderUsersTable();
-  const unverified = allUsers.filter(u=>u.role==='donor'&&!u.verified);
-  document.getElementById('unverified-count').textContent = unverified.length;
-  renderVerificationQueue(unverified);
-}
-
-function renderVerificationQueue(list) {
-  const el = document.getElementById('verification-list');
-  if (!list.length) { el.innerHTML = emptyState('No pending verifications'); return; }
-  el.innerHTML = list.map(u=>`
-    <div class="sos-item">
-      <div class="sos-blood">${u.blood_group||'?'}</div>
-      <div class="sos-info">
-        <div class="sos-hospital">${u.name}</div>
-        <div class="sos-meta">Joined ${fmtDate(u.created_at)} · Donor</div>
-      </div>
-      <button class="btn btn-sm btn-primary" onclick="approveUser('${u.id}')">Approve</button>
-    </div>
-  `).join('');
-}
-
-async function loadAdminSOS() {
-  const sos = await fetchTable('sos_requests');
-  const active = sos.filter(r=>r.status==='active');
-  document.getElementById('sos-live-count').textContent = active.length + ' active';
-  const el = document.getElementById('admin-sos-list');
-  if (!active.length) { el.innerHTML = emptyState('No active SOS requests'); return; }
-  const urgencyBadge = {critical:'badge-red',high:'badge-amber',medium:'badge-blue'};
-  el.innerHTML = active.map(r=>`
-    <div class="sos-item">
-      <div class="sos-blood">${r.blood_group}</div>
+function sosRows(list, actions=''){
+  if(!list.length) return empt('No SOS requests');
+  return list.map(r=>`
+    <div class="sos-row">
+      <div class="sos-drop">${r.blood_group}</div>
       <div class="sos-info">
         <div class="sos-hospital">${r.hospital_name}</div>
-        <div class="sos-meta">${r.units} units · ${fmtTime(r.created_at)}</div>
+        <div class="sos-meta">${r.units} units · ${r.urgency} · ${fmtAgo(r.created_at)}</div>
       </div>
-      <div class="sos-actions">
-        <span class="badge ${urgencyBadge[r.urgency]||'badge-gray'}">${r.urgency}</span>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px">
+        <span class="badge ${urg[r.urgency]||'b-gray'}">${r.urgency}</span>
+        <span class="badge ${sta[r.status]||'b-gray'}">${r.status}</span>
+        ${actions==='fulfill'?`<button class="btn btn-p btn-sm" onclick="fulfillSOS('${r.id}')">Fulfill</button>`:''}
+        ${actions==='accept'?`<button class="btn btn-p btn-sm" onclick="acceptSOS('${r.id}')">Accept</button>`:''}
       </div>
+    </div>`).join('');
+}
+
+/* ═══════════════════════════════════════════
+   ADMIN TABS
+═══════════════════════════════════════════ */
+function renderAdminOverview(el){
+  const active=M.sos_requests.filter(r=>r.status==='active').length;
+  const verDonors=M.profiles.filter(p=>p.role==='donor'&&p.verified).length;
+  const todayCamps=M.blood_camps.filter(c=>c.date===new Date().toISOString().slice(0,10)).length;
+  el.innerHTML=`
+    <div class="g-stats">
+      <div class="s-card" style="--c:#dc2626"><span class="s-icon">👥</span><div class="s-val">${M.profiles.length}</div><div class="s-lbl">Total Users</div><div class="s-sub">All registered profiles</div></div>
+      <div class="s-card" style="--c:#e03535"><span class="s-icon">🚨</span><div class="s-val">${active}</div><div class="s-lbl">Active SOS Requests</div><div class="s-sub">Needs response now</div></div>
+      <div class="s-card" style="--c:#4ade80"><span class="s-icon">✅</span><div class="s-val">${verDonors}</div><div class="s-lbl">Verified Donors</div><div class="s-sub">Cleared & active</div></div>
+      <div class="s-card" style="--c:#60a5fa"><span class="s-icon">🏕️</span><div class="s-val">${todayCamps}</div><div class="s-lbl">Camps Today</div><div class="s-sub">Scheduled for today</div></div>
     </div>
-  `).join('');
-}
-
-let adminChart;
-async function loadAdminChart() {
-  const donations = await fetchTable('donations');
-  const groups = ['A+','A-','B+','B-','O+','O-','AB+','AB-'];
-  const counts = groups.map(g => donations.filter(d=>d.blood_group===g).length);
-  const ctx = document.getElementById('admin-chart').getContext('2d');
-  if (adminChart) adminChart.destroy();
-  adminChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: groups,
-      datasets: [{
-        label: 'Donations',
-        data: counts,
-        backgroundColor: 'rgba(192,57,43,0.6)',
-        borderColor: '#c0392b',
-        borderWidth: 1,
-        borderRadius: 5,
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#9090a8', font: {size:11} } },
-        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#9090a8', font: {size:11} }, beginAtZero: true }
-      }
-    }
-  });
-}
-
-function loadSettings() {
-  ['ai','sms','autoverify'].forEach(k => {
-    const el = document.getElementById('toggle-'+k);
-    if (el) el.checked = localStorage.getItem('setting_'+k) === 'true';
-  });
-}
-function saveSetting(key, val) {
-  localStorage.setItem('setting_'+key, val);
-  toast(`Setting "${key}" ${val?'enabled':'disabled'}`, 'info');
-}
-
-// ═══════════════════════════════════════════════════════
-// HOSPITAL PANEL
-// ═══════════════════════════════════════════════════════
-async function loadHospitalPanel() {
-  await Promise.all([
-    loadHospitalRequests(),
-    loadInventory('hosp'),
-    loadHospitalHistory(),
-  ]);
-  initMap('map-donor-pool', MOCK.profiles.filter(p=>p.role==='donor'), 'red');
-}
-
-async function loadHospitalRequests() {
-  const sos = await fetchTable('sos_requests');
-  const el = document.getElementById('hosp-request-list');
-  if (!sos.length) { el.innerHTML = emptyState('No active requests'); return; }
-  const statusBadge = {pending:'badge-amber',matched:'badge-blue',fulfilled:'badge-green',active:'badge-red'};
-  el.innerHTML = sos.slice(0,5).map(r=>`
-    <div class="sos-item">
-      <div class="sos-blood">${r.blood_group}</div>
-      <div class="sos-info">
-        <div class="sos-hospital">${r.hospital_name}</div>
-        <div class="sos-meta">${r.units} units · ${fmtTime(r.created_at)}</div>
-      </div>
-      <div class="sos-actions">
-        <span class="badge ${statusBadge[r.status]||'badge-gray'}">${r.status}</span>
-        ${r.status==='active'?`<button class="btn btn-sm btn-danger" onclick="cancelSOS('${r.id}')">Cancel</button>`:''}
-      </div>
-    </div>
-  `).join('');
-}
-
-async function loadHospitalHistory() {
-  const sos = await fetchTable('sos_requests');
-  const tbody = document.getElementById('hosp-history-body');
-  const statusBadge = {pending:'badge-amber',matched:'badge-blue',fulfilled:'badge-green',active:'badge-red'};
-  if (!sos.length) { tbody.innerHTML = `<tr><td colspan="4">${emptyState('No history')}</td></tr>`; return; }
-  tbody.innerHTML = sos.map(r=>`
-    <tr>
-      <td style="color:var(--text3)">${fmtDate(r.created_at)}</td>
-      <td><strong>${r.blood_group}</strong></td>
-      <td>${r.units}</td>
-      <td><span class="badge ${statusBadge[r.status]||'badge-gray'}">${r.status}</span></td>
-    </tr>
-  `).join('');
-}
-
-async function loadInventory(target) {
-  const inv = await fetchTable('blood_inventory');
-  const groups = ['A+','A-','B+','B-','O+','O-','AB+','AB-'];
-  const maxUnits = 50;
-  const html = groups.map(g => {
-    const item = inv.find(i=>i.blood_group===g);
-    const units = item ? item.units : Math.floor(Math.random()*40)+1;
-    const cls = units < 5 ? 'critical' : units <= 15 ? 'warning' : 'good';
-    const fillColor = units < 5 ? '#f87171' : units <= 15 ? '#fbbf24' : '#4ade80';
-    const pct = Math.min(100, (units/maxUnits)*100);
-    return `
-      <div class="blood-card ${cls}" onclick="editUnits('${g}',${units})">
-        <div class="blood-type">${g}</div>
-        <div class="blood-units">${units}</div>
-        <div class="blood-card-label">units</div>
-        <div class="mini-bar"><div class="mini-bar-fill" style="width:${pct}%;background:${fillColor}"></div></div>
-      </div>
-    `;
-  }).join('');
-  const el = document.getElementById(target==='bank'?'bank-inventory':'hosp-inventory');
-  if (el) el.innerHTML = html;
-}
-
-function editUnits(group, current) {
-  const newVal = prompt(`Update units for ${group}:`, current);
-  if (newVal !== null && !isNaN(newVal)) {
-    toast(`Updated ${group} to ${newVal} units`, 'success');
-  }
-}
-
-function cancelSOS(id) { toast('SOS request cancelled', 'info'); }
-
-async function submitSOS(e) {
-  e.preventDefault();
-  const blood = document.getElementById('sos-blood').value;
-  const units = document.getElementById('sos-units').value;
-  const urgency = document.getElementById('sos-urgency').value;
-  const hospital = document.getElementById('sos-hospital').value;
-  const contact = document.getElementById('sos-contact').value;
-  if (!blood||!units||!urgency||!hospital||!contact) { toast('Please fill all required fields', 'error'); return; }
-  const row = {blood_group:blood,units:parseInt(units),urgency,hospital_name:hospital,contact,status:'active',created_at:new Date().toISOString()};
-  const ok = await insertRow('sos_requests', row);
-  MOCK.sos_requests.unshift({...row,id:'s'+Date.now()});
-  toast('🚨 SOS Request sent!', 'success');
-  document.getElementById('sos-form').reset();
-  loadHospitalRequests();
-}
-
-// ═══════════════════════════════════════════════════════
-// DONOR PANEL
-// ═══════════════════════════════════════════════════════
-async function loadDonorPanel() {
-  await Promise.all([
-    loadDonorSOS(),
-    loadDonorHistory(),
-    loadCamps(),
-  ]);
-}
-
-async function updateAvailability(val) {
-  try { await sb.from('profiles').update({available:val}).eq('id','u1'); } catch(e) {}
-  document.getElementById('avail-sub').textContent = val ? 'You are currently available to donate' : 'You are not available right now';
-  toast(`Availability set to ${val?'Available':'Unavailable'}`, 'success');
-}
-
-async function loadDonorSOS() {
-  const sos = await fetchTable('sos_requests');
-  const donorBG = 'O+';
-  const relevant = sos.filter(r=>r.status==='active');
-  document.getElementById('donor-sos-count').textContent = relevant.length;
-  const el = document.getElementById('donor-sos-list');
-  if (!relevant.length) { el.innerHTML = emptyState('No matching SOS requests'); return; }
-  el.innerHTML = relevant.map(r=>`
-    <div class="sos-item">
-      <div class="sos-blood">${r.blood_group}</div>
-      <div class="sos-info">
-        <div class="sos-hospital">${r.hospital_name}</div>
-        <div class="sos-meta">${r.units} units needed · ${r.urgency}</div>
-      </div>
-      <button class="btn btn-sm btn-primary" style="background:#0d9488" onclick="acceptSOS('${r.id}')">Accept</button>
-    </div>
-  `).join('');
-}
-
-async function acceptSOS(id) {
-  try { await sb.from('sos_requests').update({status:'matched'}).eq('id',id); } catch(e) {}
-  toast('✅ You accepted the SOS! Please proceed to hospital.', 'success');
-  loadDonorSOS();
-}
-
-async function loadDonorHistory() {
-  const donations = await fetchTable('donations');
-  const tbody = document.getElementById('donor-history-body');
-  const my = donations.filter(d=>d.donor_id==='u1');
-  if (!my.length) { tbody.innerHTML = `<tr><td colspan="4">${emptyState('No donations yet')}</td></tr>`; return; }
-  tbody.innerHTML = my.map(d=>`
-    <tr>
-      <td>${fmtDate(d.donation_date)}</td>
-      <td><strong>${d.blood_group}</strong></td>
-      <td>${d.units}</td>
-      <td><span class="badge badge-green">Completed</span></td>
-    </tr>
-  `).join('');
-}
-
-async function loadCamps() {
-  const camps = await fetchTable('blood_camps');
-  const el = document.getElementById('camps-list');
-  el.innerHTML = '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px">' +
-    camps.map(c=>`
-      <div class="camp-card">
-        <div class="camp-name">${c.name}</div>
-        <div class="camp-meta">
-          <span>📅 ${fmtDate(c.date)}</span>
-          <span>📍 ${c.city}</span>
-          <span>⏰ ${c.start_time||'TBD'}</span>
+    <div class="g-2">
+      <div class="col">
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot"></span>Live SOS Feed</div><span class="badge b-red">${active} active</span></div>
+          <div class="card-bd" style="padding:0 18px">${sosRows(M.sos_requests.filter(r=>r.status==='active'))}</div>
         </div>
-        <div style="display:flex;align-items:center;justify-content:space-between">
-          <span style="font-size:11px;color:var(--text3)">${c.address}</span>
-          <button class="btn btn-sm btn-primary" style="background:#0d9488" onclick="registerCamp('${c.id}')">Register</button>
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot"></span>Recent Users</div></div>
+          <div class="tbl-wrap"><table>
+            <thead><tr><th>Name</th><th>Role</th><th>Status</th><th>Joined</th></tr></thead>
+            <tbody>${M.profiles.slice(0,6).map(u=>`<tr>
+              <td><strong>${u.name}</strong></td>
+              <td><span class="badge ${u.role==='donor'?'b-green':u.role==='hospital'?'b-blue':'b-gray'}">${u.role}</span></td>
+              <td>${u.verified?'<span class="badge b-green">Verified</span>':'<span class="badge b-amber">Pending</span>'}</td>
+              <td style="color:var(--text3)">${fmtD(u.created_at)}</td>
+            </tr>`).join('')}</tbody>
+          </table></div>
         </div>
       </div>
-    `).join('') + '</div>';
-  initMap('map-camps', camps.map(c=>({lat:c.lat,lng:c.lng,name:c.name})), 'green');
-}
-
-async function registerCamp(id) {
-  toast('✅ Registered for camp!', 'success');
-}
-
-// ═══════════════════════════════════════════════════════
-// PATIENT PANEL
-// ═══════════════════════════════════════════════════════
-async function loadPatientPanel() {
-  await Promise.all([
-    loadPatientHistory(),
-    loadMatchedDonors(),
-    loadBloodBanks(),
-  ]);
-  initMap('map-patient', MOCK.profiles.filter(p=>p.role==='donor'&&p.available).slice(0,3), 'purple');
-}
-
-async function loadPatientHistory() {
-  const sos = await fetchTable('sos_requests');
-  const tbody = document.getElementById('patient-history-body');
-  const statusBadge = {pending:'badge-amber',matched:'badge-blue',fulfilled:'badge-green',active:'badge-red'};
-  if (!sos.length) { tbody.innerHTML = `<tr><td colspan="4">${emptyState('No requests yet')}</td></tr>`; return; }
-  tbody.innerHTML = sos.slice(0,6).map(r=>`
-    <tr>
-      <td>${fmtDate(r.created_at)}</td>
-      <td><strong>${r.blood_group}</strong></td>
-      <td>${r.units}</td>
-      <td><span class="badge ${statusBadge[r.status]||'badge-gray'}">${r.status}</span></td>
-    </tr>
-  `).join('');
-}
-
-async function loadMatchedDonors() {
-  const donors = MOCK.profiles.filter(p=>p.role==='donor'&&p.available).slice(0,3);
-  const el = document.getElementById('matched-donors-list');
-  el.innerHTML = donors.map((d,i)=>`
-    <div class="donor-card">
-      <div class="donor-avatar">${d.name[0]}</div>
-      <div class="donor-info">
-        <div class="donor-name">Donor #${String(i+1).padStart(2,'0')}</div>
-        <div class="donor-meta">${d.blood_group} · ~${(2+i*1.5).toFixed(1)} km away</div>
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-        <div style="display:flex;align-items:center;gap:4px"><span class="avail-dot on"></span><span style="font-size:11px;color:#4ade80">Available</span></div>
-        <span class="badge badge-blue">Matched</span>
-      </div>
-    </div>
-  `).join('');
-}
-
-async function loadBloodBanks() {
-  const banks = await fetchTable('blood_banks');
-  const el = document.getElementById('blood-banks-list');
-  el.innerHTML = banks.map(b=>`
-    <div class="hosp-card">
-      <div class="hosp-icon">🏥</div>
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:600">${b.name}</div>
-        <div style="font-size:11px;color:var(--text3)">${b.address}</div>
-      </div>
-      <div style="font-size:11px;color:#60a5fa">${b.phone}</div>
-    </div>
-  `).join('');
-}
-
-async function submitPatientSOS(e) {
-  e.preventDefault();
-  const name = document.getElementById('pat-name').value;
-  const blood = document.getElementById('pat-blood').value;
-  const units = document.getElementById('pat-units').value;
-  const urgency = document.getElementById('pat-urgency').value;
-  const hospital = document.getElementById('pat-hospital').value;
-  const contact = document.getElementById('pat-contact').value;
-  if (!name||!blood||!units||!urgency||!hospital||!contact) { toast('Please fill all required fields', 'error'); return; }
-  const row = {blood_group:blood,units:parseInt(units),urgency,hospital_name:hospital,contact,status:'active',created_at:new Date().toISOString()};
-  await insertRow('sos_requests', row);
-  MOCK.sos_requests.unshift({...row,id:'s'+Date.now()});
-  toast('🆘 SOS Request sent! Matching donors...', 'success');
-  document.getElementById('patient-sos-form').reset();
-  loadPatientHistory();
-}
-
-// ═══════════════════════════════════════════════════════
-// NGO PANEL
-// ═══════════════════════════════════════════════════════
-async function loadNGOPanel() {
-  await Promise.all([
-    loadRegistrations(),
-    loadNGOChart(),
-  ]);
-  const today = new Date().toISOString().slice(0,10);
-  document.getElementById('camp-date').min = today;
-}
-
-async function loadRegistrations() {
-  const regs = MOCK.camp_registrations;
-  const tbody = document.getElementById('registrations-body');
-  const donors = MOCK.profiles.filter(p=>p.role==='donor');
-  if (!regs.length) { tbody.innerHTML = `<tr><td colspan="4">${emptyState('No registrations')}</td></tr>`; return; }
-  tbody.innerHTML = regs.map(r=>{
-    const d = donors.find(x=>x.id===r.donor_id)||{name:'Unknown',blood_group:'?'};
-    return `
-      <tr>
-        <td><strong>${d.name}</strong></td>
-        <td>${d.blood_group||'—'}</td>
-        <td>+91 9XXXXXXX</td>
-        <td>
-          <label class="toggle" style="width:36px;height:20px">
-            <input type="checkbox" ${r.checked_in?'checked':''} onchange="toggleCheckin('${r.id}',this.checked)">
-            <span class="toggle-track" style="background:${r.checked_in?'var(--ngo)':''}"></span>
-          </label>
-        </td>
-      </tr>
-    `;
-  }).join('');
-}
-
-function toggleCheckin(id, val) {
-  toast(`Check-in ${val?'confirmed':'removed'}`, 'info');
-}
-
-let ngoChart;
-async function loadNGOChart() {
-  const camps = await fetchTable('blood_camps');
-  const ctx = document.getElementById('ngo-chart').getContext('2d');
-  if (ngoChart) ngoChart.destroy();
-  ngoChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: camps.map(c=>c.name.split('—')[0].trim()),
-      datasets: [{
-        label: 'Registrations',
-        data: camps.map(c => MOCK.camp_registrations.filter(r=>r.camp_id===c.id).length),
-        backgroundColor: 'rgba(180,83,9,0.6)',
-        borderColor: '#b45309',
-        borderWidth: 1,
-        borderRadius: 5,
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#9090a8', font: {size:10} } },
-        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#9090a8' }, beginAtZero: true }
-      }
-    }
-  });
-}
-
-function loadSuggestions() {
-  const suggestions = [
-    {area:'Dwarka, Delhi',score:92,density:'High',shortage:'O-, B-'},
-    {area:'Noida Sector 62',score:85,density:'Very High',shortage:'A+, AB+'},
-    {area:'Gurgaon Sector 29',score:78,density:'High',shortage:'O+'},
-  ];
-  const el = document.getElementById('ai-suggestions');
-  el.innerHTML = suggestions.map((s,i)=>`
-    <div class="suggestion-card">
-      <div class="suggestion-rank">#${i+1}</div>
-      <div class="suggestion-info">
-        <div class="suggestion-area">${s.area}</div>
-        <div style="font-size:12px;color:var(--text3)">Shortage: <strong style="color:#fbbf24">${s.shortage}</strong></div>
-        <div class="suggestion-meta">
-          <span>Shortage Score: <strong>${s.score}</strong></span>
-          <span>Density: <strong>${s.density}</strong></span>
+      <div class="col">
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot"></span>Donations by Blood Group</div></div>
+          <div class="card-bd"><div class="chart-box"><canvas id="ch-admin-overview"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot"></span>Platform Health</div></div>
+          <div class="card-bd">
+            ${[['AI Matching','active'],['SMS Alerts','active'],['Real-time Sync','active'],['Auto-Verification','paused']].map(([n,s])=>`
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)">
+                <span style="font-size:13px;font-weight:500">${n}</span>
+                <span class="badge ${s==='active'?'b-green':'b-amber'}">${s}</span>
+              </div>`).join('')}
+          </div>
         </div>
       </div>
-      <button class="btn btn-sm" style="background:#b45309;color:white;align-self:flex-start" onclick="toast('Location saved to camp form','success')">Use</button>
-    </div>
-  `).join('');
-  toast('✨ AI suggestions loaded!', 'success');
-}
-
-async function submitCamp(e) {
-  e.preventDefault();
-  const name = document.getElementById('camp-name').value;
-  const date = document.getElementById('camp-date').value;
-  const city = document.getElementById('camp-city').value;
-  const address = document.getElementById('camp-address').value;
-  if (!name||!date||!city||!address) { toast('Please fill all required fields', 'error'); return; }
-  const row = {name,date,city,address,start_time:document.getElementById('camp-start').value,end_time:document.getElementById('camp-end').value,expected_donors:parseInt(document.getElementById('camp-expected').value)||0};
-  await insertRow('blood_camps', row);
-  MOCK.blood_camps.push({...row,id:'c'+Date.now(),lat:28.6139,lng:77.2090});
-  toast('📅 Blood camp scheduled!', 'success');
-  document.getElementById('camp-form').reset();
-}
-
-// ═══════════════════════════════════════════════════════
-// BLOOD BANK PANEL
-// ═══════════════════════════════════════════════════════
-async function loadBankPanel() {
-  await Promise.all([
-    loadInventory('bank'),
-    loadIncomingRequests(),
-    loadHospitalConnections(),
-    loadShortageAlerts(),
-    loadExpiryTracker(),
-  ]);
-}
-
-async function loadIncomingRequests() {
-  const sos = await fetchTable('sos_requests');
-  const pending = sos.filter(r=>r.status==='pending'||r.status==='active');
-  document.getElementById('incoming-count').textContent = pending.length;
-  const el = document.getElementById('incoming-requests-list');
-  if (!pending.length) { el.innerHTML = emptyState('No pending requests'); return; }
-  const urgencyBadge = {critical:'badge-red',high:'badge-amber',medium:'badge-blue'};
-  el.innerHTML = pending.map(r=>`
-    <div class="sos-item">
-      <div class="sos-blood">${r.blood_group}</div>
-      <div class="sos-info">
-        <div class="sos-hospital">${r.hospital_name}</div>
-        <div class="sos-meta">${r.units} units · <span class="badge ${urgencyBadge[r.urgency]||'badge-gray'}">${r.urgency}</span></div>
-      </div>
-      <button class="btn btn-sm btn-primary" style="background:#15803d" onclick="fulfillRequest('${r.id}')">Fulfill</button>
-    </div>
-  `).join('');
-}
-
-async function fulfillRequest(id) {
-  const req = MOCK.sos_requests.find(r=>r.id===id);
-  if (req) req.status = 'fulfilled';
-  toast('✅ Request fulfilled! Inventory updated.', 'success');
-  loadIncomingRequests();
-  loadInventory('bank');
-}
-
-async function loadHospitalConnections() {
-  const hospitals = await fetchTable('hospitals');
-  const el = document.getElementById('hospital-connections-list');
-  el.innerHTML = hospitals.map(h=>`
-    <div class="hosp-card">
-      <div class="hosp-icon">🏥</div>
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:600">${h.name}</div>
-        <div style="font-size:11px;color:var(--text3)">${h.address}</div>
-      </div>
-      <button class="btn btn-sm ${h.connected?'btn-danger':'btn-primary'}" style="${h.connected?'':'background:#15803d;color:white'}" onclick="toggleHospital('${h.id}',${!h.connected})">
-        ${h.connected?'Disconnect':'Connect'}
-      </button>
-    </div>
-  `).join('');
-}
-
-function toggleHospital(id, val) {
-  const h = MOCK.hospitals.find(x=>x.id===id);
-  if (h) h.connected = val;
-  toast(`Hospital ${val?'connected':'disconnected'}`, 'info');
-  loadHospitalConnections();
-}
-
-async function loadShortageAlerts() {
-  const inv = await fetchTable('blood_inventory');
-  const shorts = inv.filter(i=>i.units<5);
-  const el = document.getElementById('shortage-list');
-  if (!shorts.length) { el.innerHTML = emptyState('✅ No critical shortages'); return; }
-  el.innerHTML = shorts.map(i=>`
-    <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--surface2);border-radius:8px;border:1px solid rgba(224,53,53,0.2)">
-      <div class="sos-blood">${i.blood_group}</div>
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:600">Critical Shortage</div>
-        <div style="font-size:11px;color:var(--text3)">Only ${i.units} unit${i.units!==1?'s':''} remaining</div>
-      </div>
-      <button class="btn btn-sm btn-danger" onclick="toast('Donor notification sent!','info')">Notify Donors</button>
-    </div>
-  `).join('');
-}
-
-async function loadExpiryTracker() {
-  const inv = await fetchTable('blood_inventory');
-  const now = new Date();
-  const in7 = new Date(now.getTime() + 7*24*60*60*1000);
-  const expiring = inv.filter(i => {
-    const d = new Date(i.expiry_date);
-    return d <= in7;
-  });
-  const el = document.getElementById('expiry-list');
-  if (!expiring.length) { el.innerHTML = emptyState('No units expiring soon'); return; }
-  el.innerHTML = expiring.map(i=>{
-    const days = Math.ceil((new Date(i.expiry_date)-now)/(1000*60*60*24));
-    const cls = days <= 2 ? 'urgent' : days <= 5 ? 'warning' : 'ok';
-    return `
-      <div class="countdown-item">
-        <div>
-          <span class="badge badge-red" style="margin-right:8px">${i.blood_group}</span>
-          <span style="font-size:13px">${i.units} units</span>
-        </div>
-        <div>
-          <span class="countdown-timer ${cls}">${days <= 0 ? 'EXPIRED' : days+'d left'}</span>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-// ═══════════════════════════════════════════════════════
-// MAP (Google Maps or placeholder)
-// ═══════════════════════════════════════════════════════
-const mapsLoaded = {};
-function initMap(containerId, markers, color) {
-  const el = document.getElementById(containerId);
-  if (!el) return;
-  // Use a static map via Google Maps Embed or show placeholder
-  const colorMap = {red:'#e03535',green:'#15803d',purple:'#7c3aed',blue:'#2563eb'};
-  const accent = colorMap[color]||'#e03535';
-  const lats = markers.map(m=>m.lat).filter(Boolean);
-  const lngs = markers.map(m=>m.lng).filter(Boolean);
-  const centerLat = lats.length ? (lats.reduce((a,b)=>a+b,0)/lats.length) : 28.6139;
-  const centerLng = lngs.length ? (lngs.reduce((a,b)=>a+b,0)/lngs.length) : 77.2090;
-
-  // Build static map
-  const key = 'AIzaSyBMbOyJ0Vn24OMA5R1-4zxwJvWa2oKTvIo';
-  const size = `${el.offsetWidth||400}x${el.offsetHeight||260}`;
-  const markerStr = markers.slice(0,10).map(m=>
-    `markers=color:${encodeURIComponent(accent.replace('#','0x'))}|${m.lat||centerLat},${m.lng||centerLng}`
-  ).join('&');
-  const mapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${centerLat},${centerLng}&zoom=11&size=${size}&scale=2&style=element:all|color:0x0a0a0f&style=feature:road|element:geometry|color:0x1c1c28&style=feature:water|element:geometry|color:0x111118&${markerStr}&key=${key}`;
-
-  el.innerHTML = '';
-  const img = document.createElement('img');
-  img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
-  img.src = mapUrl;
-  img.onerror = () => {
-    el.innerHTML = `<div class="map-placeholder">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
-      <span>${markers.length} location${markers.length!==1?'s':''} plotted</span>
-      <span style="font-size:10px;color:var(--text3)">${centerLat.toFixed(4)}, ${centerLng.toFixed(4)}</span>
     </div>`;
-  };
-  el.appendChild(img);
+  setTimeout(()=>{
+    const g=['A+','A-','B+','B-','O+','O-','AB+','AB-'];
+    mkChart('ch-admin-overview','bar',g,g.map(gr=>M.donations.filter(d=>d.blood_group===gr).length),'#dc2626');
+  },50);
 }
 
-// ═══════════════════════════════════════════════════════
-// REAL-TIME
-// ═══════════════════════════════════════════════════════
-function initRealtime() {
-  try {
-    const channel = sb.channel('db-changes')
-      .on('postgres_changes', {event:'*', schema:'public', table:'sos_requests'}, payload => {
-        toast('🚨 New SOS update received!', 'info');
-        if (currentPanel==='admin') loadAdminSOS();
-        if (currentPanel==='hospital') loadHospitalRequests();
-        if (currentPanel==='donor') loadDonorSOS();
-      })
-      .on('postgres_changes', {event:'*', schema:'public', table:'profiles'}, payload => {
-        if (currentPanel==='admin') loadUsers();
-      })
-      .subscribe(status => {
-        if (status === 'SUBSCRIBED') {
-          document.getElementById('live-indicator').style.display = 'flex';
-        }
-      });
-  } catch(e) {
-    console.log('Realtime unavailable, running in demo mode');
-  }
+function renderAdminUsers(el){
+  el.innerHTML=`
+    <div class="card">
+      <div class="card-hd"><div class="card-title"><span class="card-dot"></span>User Management</div><span class="badge b-gray">${M.profiles.length} total</span></div>
+      <div class="card-bd" style="padding-bottom:0">
+        <div style="display:flex;gap:10px;margin-bottom:14px">
+          <input class="form-input" style="flex:1;font-size:13px;padding:8px 12px" placeholder="Search name or email…" oninput="filterUserTable(this.value)">
+          <select class="form-select" style="width:130px;font-size:13px;padding:8px 12px" onchange="filterUserTable('','',this.value)">
+            <option value="">All roles</option><option>donor</option><option>hospital</option><option>patient</option><option>ngo</option>
+          </select>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table><thead><tr><th>Name</th><th>Role</th><th>Blood Group</th><th>Verified</th><th>Joined</th><th>Actions</th></tr></thead>
+        <tbody id="user-tbl">${M.profiles.map(u=>`<tr>
+          <td><strong>${u.name}</strong></td>
+          <td><span class="badge ${u.role==='donor'?'b-green':u.role==='hospital'?'b-blue':u.role==='patient'?'b-teal':'b-gray'}">${u.role}</span></td>
+          <td>${u.blood_group||'—'}</td>
+          <td>${u.verified?'<span class="badge b-green">✅ Yes</span>':'<span class="badge b-amber">Pending</span>'}</td>
+          <td style="color:var(--text3)">${fmtD(u.created_at)}</td>
+          <td><button class="btn btn-sm btn-p" onclick="approveU('${u.id}')">Approve</button> <button class="btn btn-sm btn-danger" onclick="toast('User suspended','info')">Suspend</button></td>
+        </tr>`).join('')}</tbody></table>
+      </div>
+    </div>`;
 }
 
-// ═══════════════════════════════════════════════════════
-// SOS MODAL
-// ═══════════════════════════════════════════════════════
-function openSOS() {
-  switchPanel('hospital', document.querySelector('[data-panel="hospital"]'));
-  setTimeout(() => {
-    document.getElementById('sos-blood').focus();
-    toast('Please fill the SOS form below', 'info');
-  }, 300);
+function filterUserTable(q,_,role){
+  const rows=document.querySelectorAll('#user-tbl tr');
+  rows.forEach(r=>{
+    const txt=r.textContent.toLowerCase();
+    r.style.display=((!q||txt.includes(q.toLowerCase()))&&(!role||txt.includes(role)))?'':'none';
+  });
 }
 
-// ═══════════════════════════════════════════════════════
-// HELPERS
-// ═══════════════════════════════════════════════════════
-function fmtDate(d) {
-  if (!d) return '—';
-  return new Date(d).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'});
-}
-function fmtTime(d) {
-  if (!d) return '—';
-  const diff = Math.floor((Date.now()-new Date(d).getTime())/60000);
-  if (diff<1) return 'just now';
-  if (diff<60) return diff+'m ago';
-  if (diff<1440) return Math.floor(diff/60)+'h ago';
-  return Math.floor(diff/1440)+'d ago';
+function approveU(id){
+  const u=M.profiles.find(p=>p.id===id); if(u) u.verified=true;
+  toast('User approved ✅','succ');
+  renderTab('users');
 }
 
-function emptyState(msg) {
-  return `<div class="empty-state">
-    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-      <rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 9h6M9 12h4M9 15h3"/>
-    </svg>
-    <p>${msg}</p>
-  </div>`;
+function renderAdminVerif(el){
+  const pend=M.profiles.filter(p=>!p.verified&&p.role==='donor');
+  el.innerHTML=`
+    <div class="card">
+      <div class="card-hd"><div class="card-title"><span class="card-dot"></span>Donor Verification Queue</div><span class="badge b-amber">${pend.length} pending</span></div>
+      <div class="card-bd" style="padding:0 18px">
+        ${pend.length?pend.map(u=>`
+          <div class="sos-row">
+            <div class="sos-drop">${u.blood_group||'?'}</div>
+            <div class="sos-info">
+              <div class="sos-hospital">${u.name}</div>
+              <div class="sos-meta">Registered ${fmtD(u.created_at)} · Trust score: ${u.trust_score||0}/100</div>
+            </div>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-sm btn-p" onclick="approveU('${u.id}')">✅ Approve</button>
+              <button class="btn btn-sm btn-danger" onclick="toast('Rejected','info')">Reject</button>
+            </div>
+          </div>`).join(''):empt('All donors verified!')}
+      </div>
+    </div>`;
 }
 
-// ═══════════════════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', async () => {
-  loadSettings();
-  initRealtime();
-  await loadAdminPanel();
+function renderAdminSOS(el){
+  el.innerHTML=`
+    <div class="g-2">
+      <div class="col">
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot" style="background:#dc2626"></span>Active SOS Requests</div><span class="badge b-red">${M.sos_requests.filter(r=>r.status==='active').length}</span></div>
+          <div class="card-bd" style="padding:0 18px">${sosRows(M.sos_requests.filter(r=>r.status==='active'),'fulfill')}</div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot"></span>All Requests</div></div>
+          <div class="tbl-wrap"><table>
+            <thead><tr><th>Blood</th><th>Hospital</th><th>Units</th><th>Urgency</th><th>Status</th></tr></thead>
+            <tbody>${M.sos_requests.map(r=>`<tr>
+              <td><strong>${r.blood_group}</strong></td>
+              <td>${r.hospital_name}</td>
+              <td>${r.units}</td>
+              <td><span class="badge ${urg[r.urgency]}">${r.urgency}</span></td>
+              <td><span class="badge ${sta[r.status]}">${r.status}</span></td>
+            </tr>`).join('')}</tbody>
+          </table></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderAdminAnalytics(el){
+  el.innerHTML=`
+    <div class="g-2">
+      <div class="col">
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot"></span>Donations by Blood Group</div></div>
+          <div class="card-bd"><div class="chart-box"><canvas id="ch-analytics-1"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot"></span>SOS Status Breakdown</div></div>
+          <div class="card-bd"><div class="chart-box"><canvas id="ch-analytics-2"></canvas></div></div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot"></span>User Growth</div></div>
+          <div class="card-bd"><div class="chart-box"><canvas id="ch-analytics-3"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot"></span>Platform Metrics</div></div>
+          <div class="card-bd">
+            ${[['Total Donations','5,280','🩸'],['Avg Response Time','12 min','⚡'],['Match Rate','94%','🎯'],['Donor Retention','78%','🔄']].map(([l,v,i])=>`
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--border)">
+                <span style="font-size:13px;color:var(--text2)">${i} ${l}</span>
+                <span style="font-family:'Syne',sans-serif;font-weight:800;font-size:16px">${v}</span>
+              </div>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  setTimeout(()=>{
+    const g=['A+','A-','B+','B-','O+','O-','AB+','AB-'];
+    mkChart('ch-analytics-1','bar',g,g.map(gr=>M.donations.filter(d=>d.blood_group===gr).length),'#dc2626');
+    mkChart('ch-analytics-2','doughnut',['Active','Matched','Fulfilled','Pending'],[3,1,1,1],'#2563eb',true);
+    mkChart('ch-analytics-3','line',['Jan','Feb','Mar','Apr'],[820,1240,1890,2650],'#0d9488');
+  },50);
+}
+
+function renderAdminSettings(el){
+  const settings=[
+    {k:'ai',label:'🤖 AI Donor Matching',desc:'Auto-match donors to SOS based on blood group & proximity'},
+    {k:'sms',label:'📱 SMS Alerts',desc:'Send SMS notifications to compatible donors'},
+    {k:'autov',label:'✅ Auto-Verification',desc:'Automatically verify donors after first successful donation'},
+    {k:'rt',label:'⚡ Real-time Sync',desc:'Enable Supabase real-time websocket connections'},
+  ];
+  el.innerHTML=`
+    <div class="g-2">
+      <div class="col">
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot"></span>Platform Settings</div></div>
+          <div class="card-bd" style="padding:4px 20px">
+            ${settings.map(s=>`
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border)">
+                <div>
+                  <div style="font-size:13px;font-weight:600">${s.label}</div>
+                  <div style="font-size:11px;color:var(--text3);margin-top:2px">${s.desc}</div>
+                </div>
+                <label class="tog"><input type="checkbox" ${localStorage.getItem('s_'+s.k)==='true'?'checked':''} onchange="saveSetting('${s.k}',this.checked)"><span class="tog-track"></span></label>
+              </div>`).join('')}
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot"></span>System Info</div></div>
+          <div class="card-bd">
+            ${[['Version','2.1.0'],['Environment','Production'],['Database','Supabase (PostgreSQL)'],['Auth Provider','Supabase Auth'],['Real-time','WebSocket Active'],['Last Deploy','Apr 18, 2024']].map(([k,v])=>`
+              <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px">
+                <span style="color:var(--text2)">${k}</span><span style="font-weight:600">${v}</span>
+              </div>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function saveSetting(k,v){localStorage.setItem('s_'+k,v);toast(`"${k}" ${v?'enabled':'disabled'}`,'info');}
+
+/* ═══════════════════════════════════════════
+   HOSPITAL TABS
+═══════════════════════════════════════════ */
+function renderHospOverview(el){
+  const active=M.sos_requests.filter(r=>r.status==='active').length;
+  el.innerHTML=`
+    <div class="g-stats">
+      <div class="s-card" style="--c:#2563eb"><span class="s-icon">🚨</span><div class="s-val">${active}</div><div class="s-lbl">Active SOS</div><div class="s-sub">Awaiting response</div></div>
+      <div class="s-card" style="--c:#4ade80"><span class="s-icon">✅</span><div class="s-val">${M.sos_requests.filter(r=>r.status==='fulfilled').length}</div><div class="s-lbl">Fulfilled</div><div class="s-sub">This month</div></div>
+      <div class="s-card" style="--c:#fbbf24"><span class="s-icon">🩸</span><div class="s-val">156</div><div class="s-lbl">Units Available</div><div class="s-sub">Across all groups</div></div>
+      <div class="s-card" style="--c:#60a5fa"><span class="s-icon">👤</span><div class="s-val">${M.profiles.filter(p=>p.role==='donor'&&p.available).length}</div><div class="s-lbl">Available Donors</div><div class="s-sub">Nearby & ready</div></div>
+    </div>
+    <div class="g-2">
+      <div class="col">
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot" style="background:#2563eb"></span>Recent SOS Requests</div><button class="card-act" style="color:#60a5fa" onclick="switchTab('h-sos')">+ New SOS</button></div>
+          <div class="card-bd" style="padding:0 18px">${sosRows(M.sos_requests.slice(0,4))}</div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot" style="background:#2563eb"></span>Blood Inventory Snapshot</div></div>
+          <div class="card-bd">${bloodGrid(M.blood_inventory)}</div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot" style="background:#2563eb"></span>Donor Pool Status</div></div>
+          <div class="card-bd"><div class="chart-box"><canvas id="ch-hosp-overview"></canvas></div></div>
+        </div>
+      </div>
+    </div>`;
+  setTimeout(()=>{
+    const g=['A+','A-','B+','B-','O+','O-','AB+','AB-'];
+    mkChart('ch-hosp-overview','bar',g,g.map(gr=>M.profiles.filter(p=>p.blood_group===gr&&p.available).length),'#2563eb');
+  },50);
+}
+
+function renderHospSOS(el){
+  el.innerHTML=`
+    <div class="g-2">
+      <div class="col">
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot" style="background:#2563eb"></span>Raise Emergency SOS</div></div>
+          <div class="card-bd">
+            <form class="d-form" onsubmit="submitHospSOS(event)">
+              <div class="d-row">
+                <div class="form-group"><label class="form-label">Blood Group *</label>
+                  <select class="form-select" id="h-blood" required><option value="">Select</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>O+</option><option>O-</option><option>AB+</option><option>AB-</option></select></div>
+                <div class="form-group"><label class="form-label">Units Needed *</label>
+                  <input type="number" class="form-input" id="h-units" min="1" max="20" placeholder="e.g. 3" required></div>
+              </div>
+              <div class="d-row">
+                <div class="form-group"><label class="form-label">Urgency *</label>
+                  <select class="form-select" id="h-urgency" required><option value="">Select</option><option value="critical">🔴 Critical</option><option value="high">🟠 High</option><option value="medium">🟡 Medium</option></select></div>
+                <div class="form-group"><label class="form-label">Contact Number *</label>
+                  <input type="tel" class="form-input" id="h-contact" placeholder="+91 9XXXXXXXXX" required></div>
+              </div>
+              <div class="form-group"><label class="form-label">Hospital Name *</label>
+                <input type="text" class="form-input" id="h-hospname" placeholder="e.g. AIIMS New Delhi" required></div>
+              <button type="submit" class="btn btn-p btn-full" style="margin-top:8px">🚨 Send SOS Alert</button>
+            </form>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot" style="background:#2563eb"></span>Your Active Requests</div></div>
+          <div class="card-bd" style="padding:0 18px">${sosRows(M.sos_requests.filter(r=>r.status==='active'))}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function submitHospSOS(e){
+  e.preventDefault();
+  const blood=document.getElementById('h-blood').value;
+  const units=document.getElementById('h-units').value;
+  const urgency=document.getElementById('h-urgency').value;
+  const contact=document.getElementById('h-contact').value;
+  const hospname=document.getElementById('h-hospname').value;
+  if(!blood||!units||!urgency||!contact||!hospname){toast('Fill all required fields','err');return;}
+  M.sos_requests.unshift({id:'s'+Date.now(),blood_group:blood,units:parseInt(units),urgency,hospital_name:hospname,contact,status:'active',created_at:new Date().toISOString()});
+  toast('🚨 SOS broadcast sent to nearby donors!','succ');
+  e.target.reset();
+  setTimeout(()=>renderTab('h-sos'),300);
+}
+
+function renderHospTracker(el){
+  el.innerHTML=`
+    <div class="card">
+      <div class="card-hd"><div class="card-title"><span class="card-dot" style="background:#2563eb"></span>Request Tracker</div><span class="badge b-blue">${M.sos_requests.length} total</span></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Blood Group</th><th>Hospital</th><th>Units</th><th>Urgency</th><th>Status</th><th>Time</th><th>Action</th></tr></thead>
+        <tbody>${M.sos_requests.map(r=>`<tr>
+          <td><strong>${r.blood_group}</strong></td>
+          <td>${r.hospital_name}</td>
+          <td>${r.units}</td>
+          <td><span class="badge ${urg[r.urgency]||'b-gray'}">${r.urgency}</span></td>
+          <td><span class="badge ${sta[r.status]||'b-gray'}">${r.status}</span></td>
+          <td style="color:var(--text3)">${fmtAgo(r.created_at)}</td>
+          <td>${r.status==='active'?`<button class="btn btn-sm btn-danger" onclick="cancelSOSH('${r.id}')">Cancel</button>`:'—'}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>`;
+}
+
+function cancelSOSH(id){
+  const r=M.sos_requests.find(x=>x.id===id);if(r)r.status='pending';
+  toast('Request cancelled','info');renderTab('h-tracker');
+}
+
+function renderHospInventory(el){
+  el.innerHTML=`
+    <div class="g-2">
+      <div class="col">
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot" style="background:#2563eb"></span>Current Inventory</div><button class="card-act" style="color:#60a5fa" onclick="toast('Synced with blood bank','succ')">↻ Sync</button></div>
+          <div class="card-bd">${bloodGrid(M.blood_inventory)}</div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot" style="background:#dc2626"></span>Critical Shortages</div></div>
+          <div class="card-bd" style="display:flex;flex-direction:column;gap:8px">
+            ${M.blood_inventory.filter(i=>i.units<5).map(i=>`
+              <div style="display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--surface2);border:1px solid rgba(224,53,53,0.2);border-radius:var(--r-sm)">
+                <div class="sos-drop">${i.blood_group}</div>
+                <div style="flex:1"><div style="font-size:13px;font-weight:600">Critical — Only ${i.units} unit(s)</div>
+                <div style="font-size:11px;color:var(--text3)">Expires: ${fmtD(i.expiry_date)}</div></div>
+                <button class="btn btn-sm btn-p" onclick="toast('Alert sent to donors','succ')">Notify</button>
+              </div>`).join('')||empt('No critical shortages')}
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot" style="background:#b45309"></span>Expiry Watch</div><span class="badge b-amber">7-day window</span></div>
+          <div class="card-bd" style="padding:0 18px">
+            ${M.blood_inventory.map(i=>{
+              const days=Math.ceil((new Date(i.expiry_date)-Date.now())/(86400000));
+              const cls=days<=2?'u':days<=5?'w':'ok';
+              return `<div class="exp-row">
+                <div><span class="badge b-red" style="margin-right:8px">${i.blood_group}</span><span style="font-size:13px">${i.units} units</span></div>
+                <span class="exp-timer ${cls}">${days<0?'EXPIRED':days+'d left'}</span>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderHospDonors(el){
+  const donors=M.profiles.filter(p=>p.role==='donor');
+  el.innerHTML=`
+    <div class="g-2">
+      <div class="col">
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot" style="background:#2563eb"></span>Available Donors</div><span class="badge b-green">${donors.filter(d=>d.available).length} available</span></div>
+          <div class="card-bd" style="display:flex;flex-direction:column;gap:8px">
+            ${donors.map(d=>`
+              <div class="d-card">
+                <div class="d-av">${d.name[0]}</div>
+                <div style="flex:1"><div class="d-name">${d.name}</div><div class="d-meta">${d.blood_group||'?'} · Trust: ${d.trust_score||0}/100</div></div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  ${d.available?'<span style="width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 5px #22c55e"></span>':'<span style="width:7px;height:7px;border-radius:50%;background:var(--text3)"></span>'}
+                  <span class="badge ${d.verified?'b-green':'b-amber'}">${d.verified?'Verified':'Pending'}</span>
+                </div>
+              </div>`).join('')}
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot" style="background:#2563eb"></span>Donor Map</div></div>
+          <div class="card-bd" style="padding:0 18px 18px">
+            <div class="map-ph" id="hosp-map">
+              <img src="https://maps.googleapis.com/maps/api/staticmap?center=28.6139,77.2090&zoom=11&size=600x220&scale=2&style=element:all|color:0x0a0a0f&style=feature:road|element:geometry|color:0x1c1c28&style=feature:water|element:geometry|color:0x111118${donors.map(d=>`&markers=color:0xe03535|${d.lat||28.6+Math.random()*0.1},${d.lng||77.2+Math.random()*0.1}`).join('')}&key=AIzaSyBMbOyJ0Vn24OMA5R1-4zxwJvWa2oKTvIo" alt="Donor Map" onerror="this.parentNode.innerHTML='<div style=color:var(--text3);font-size:13px>Map unavailable</div>'">
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot" style="background:#2563eb"></span>Donors by Blood Group</div></div>
+          <div class="card-bd"><div class="chart-box"><canvas id="ch-donors-bg"></canvas></div></div>
+        </div>
+      </div>
+    </div>`;
+  setTimeout(()=>{
+    const g=['A+','A-','B+','B-','O+','O-','AB+','AB-'];
+    mkChart('ch-donors-bg','doughnut',g,g.map(gr=>donors.filter(d=>d.blood_group===gr).length),'#2563eb',true);
+  },50);
+}
+
+function renderHospHistory(el){
+  el.innerHTML=`
+    <div class="card">
+      <div class="card-hd"><div class="card-title"><span class="card-dot" style="background:#2563eb"></span>Request History</div></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Date</th><th>Blood Group</th><th>Units</th><th>Urgency</th><th>Status</th><th>Contact</th></tr></thead>
+        <tbody>${M.sos_requests.map(r=>`<tr>
+          <td style="color:var(--text3)">${fmtAgo(r.created_at)}</td>
+          <td><strong>${r.blood_group}</strong></td>
+          <td>${r.units}</td>
+          <td><span class="badge ${urg[r.urgency]||'b-gray'}">${r.urgency}</span></td>
+          <td><span class="badge ${sta[r.status]||'b-gray'}">${r.status}</span></td>
+          <td style="color:var(--text3);font-size:12px">${r.contact}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>`;
+}
+
+/* ═══════════════════════════════════════════
+   USER TABS
+═══════════════════════════════════════════ */
+function renderUserProfile(el){
+  const me=M.profiles[0];
+  el.innerHTML=`
+    <div class="g-2">
+      <div class="col">
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot" style="background:#0d9488"></span>My Profile</div><button class="card-act" style="color:#2dd4bf" onclick="toast('Profile saved','succ')">Save Changes</button></div>
+          <div class="card-bd">
+            <div class="profile-hero">
+              <div class="profile-avatar">${me.name[0]}</div>
+              <div>
+                <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:20px">${me.name}</div>
+                <div style="font-size:13px;color:var(--text2);margin-top:3px">Blood Group: <strong style="color:#2dd4bf">${me.blood_group||'—'}</strong> · <span class="badge b-green">Verified Donor</span></div>
+              </div>
+            </div>
+            <div class="d-form">
+              <div class="d-row">
+                <div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" value="${me.name}"></div>
+                <div class="form-group"><label class="form-label">Blood Group</label>
+                  <select class="form-select"><option>O+</option><option>A+</option><option>B+</option></select></div>
+              </div>
+              <div class="form-group"><label class="form-label">Phone Number</label><input type="tel" class="form-input" placeholder="+91 9XXXXXXXXX"></div>
+              <div class="form-group"><label class="form-label">City</label><input type="text" class="form-input" placeholder="New Delhi"></div>
+            </div>
+            <div style="padding-top:14px;border-top:1px solid var(--border)">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <div>
+                  <div style="font-size:13px;font-weight:600">Donation Availability</div>
+                  <div style="font-size:11px;color:var(--text3);margin-top:3px" id="avail-txt">${me.available?'You are available to donate':'You are not available'}</div>
+                </div>
+                <label class="tog"><input type="checkbox" ${me.available?'checked':''} onchange="toggleAvail(this.checked)"><span class="tog-track"></span></label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Trust Score -->
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot" style="background:#0d9488"></span>Trust Score</div></div>
+          <div class="card-bd" style="display:flex;align-items:center;gap:24px">
+            <div style="position:relative;width:100px;height:100px;flex-shrink:0">
+              <svg width="100" height="100" style="transform:rotate(-90deg)">
+                <circle cx="50" cy="50" r="42" fill="none" stroke="var(--surface3)" stroke-width="8"/>
+                <circle cx="50" cy="50" r="42" fill="none" stroke="#0d9488" stroke-width="8" stroke-linecap="round"
+                  stroke-dasharray="264" stroke-dashoffset="${264-(264*(me.trust_score||0)/100)}"/>
+              </svg>
+              <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+                <span style="font-family:'Syne',sans-serif;font-weight:800;font-size:22px">${me.trust_score||0}</span>
+                <span style="font-size:10px;color:var(--text3)">/100</span>
+              </div>
+            </div>
+            <div>
+              <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:6px">Trusted Donor · Lv3</div>
+              <div style="font-size:12px;color:var(--text3)">Complete 2 more donations to reach Level 4</div>
+              <div style="margin-top:12px;display:flex;gap:8px">
+                ${[['🩸','1st Donation',true],['⭐','5x Donor',true],['🏆','Lifesaver',true],['💎','10x',false]].map(([ic,nm,un])=>`
+                  <div style="text-align:center;opacity:${un?1:0.3}">
+                    <div style="font-size:20px">${ic}</div>
+                    <div style="font-size:10px;color:var(--text3);margin-top:2px">${nm}</div>
+                  </div>`).join('')}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col">
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot" style="background:#0d9488"></span>Donation History</div></div>
+          <div class="tbl-wrap"><table>
+            <thead><tr><th>Date</th><th>Blood Group</th><th>Units</th><th>Status</th></tr></thead>
+            <tbody>${M.donations.filter(d=>d.donor_id==='u1').map(d=>`<tr>
+              <td>${fmtD(d.donation_date)}</td><td><strong>${d.blood_group}</strong></td><td>${d.units}</td>
+              <td><span class="badge b-green">Completed</span></td>
+            </tr>`).join('')||`<tr><td colspan="4">${empt('No donations yet')}</td></tr>`}</tbody>
+          </table></div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot" style="background:#0d9488"></span>Donation Stats</div></div>
+          <div class="card-bd"><div class="chart-box"><canvas id="ch-user-donations"></canvas></div></div>
+        </div>
+      </div>
+    </div>`;
+  setTimeout(()=>{
+    mkChart('ch-user-donations','line',['Jan','Feb','Mar','Apr'],[0,1,1,2],'#0d9488');
+  },50);
+}
+
+function toggleAvail(v){
+  M.profiles[0].available=v;
+  const el=document.getElementById('avail-txt');
+  if(el) el.textContent=v?'You are available to donate':'You are not available';
+  toast(`Availability: ${v?'Available ✅':'Unavailable'}`,v?'succ':'info');
+}
+
+function renderUserAlerts(el){
+  const active=M.sos_requests.filter(r=>r.status==='active');
+  el.innerHTML=`
+    <div class="g-2">
+      <div class="col">
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot" style="background:#dc2626"></span>Active SOS Alerts</div><span class="badge b-red">${active.length} near you</span></div>
+          <div class="card-bd" style="padding:0 18px">${active.length?active.map(r=>`
+            <div class="sos-row">
+              <div class="sos-drop">${r.blood_group}</div>
+              <div class="sos-info">
+                <div class="sos-hospital">${r.hospital_name}</div>
+                <div class="sos-meta">${r.units} units · ${r.urgency} · ${fmtAgo(r.created_at)}</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">
+                <span class="badge ${urg[r.urgency]||'b-gray'}">${r.urgency}</span>
+                <button class="btn btn-sm btn-p" onclick="acceptSOS('${r.id}')">🩸 Donate</button>
+              </div>
+            </div>`).join(''):empt('No matching SOS alerts right now')}
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot" style="background:#dc2626"></span>My Accepted Requests</div></div>
+          <div class="card-bd">${empt('You have no active acceptances')}</div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot" style="background:#0d9488"></span>Notification Settings</div></div>
+          <div class="card-bd" style="padding:4px 20px">
+            ${[['SMS Alerts','Get SMS for matching SOS'],['Push Alerts','Browser push notifications'],['Email Digest','Weekly donation summary']].map(([t,d])=>`
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+                <div><div style="font-size:13px;font-weight:500">${t}</div><div style="font-size:11px;color:var(--text3)">${d}</div></div>
+                <label class="tog"><input type="checkbox" checked><span class="tog-track"></span></label>
+              </div>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function acceptSOS(id){
+  const r=M.sos_requests.find(x=>x.id===id);if(r)r.status='matched';
+  toast('✅ Accepted! Please proceed to the hospital.','succ');
+  renderTab(currentTab);
+}
+function fulfillSOS(id){
+  const r=M.sos_requests.find(x=>x.id===id);if(r)r.status='fulfilled';
+  toast('✅ Request fulfilled!','succ');
+  renderTab(currentTab);
+}
+
+function renderUserHistory(el){
+  el.innerHTML=`
+    <div class="card">
+      <div class="card-hd"><div class="card-title"><span class="card-dot" style="background:#0d9488"></span>Full Donation History</div><span class="badge b-teal">${M.donations.filter(d=>d.donor_id==='u1').length} donations</span></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Date</th><th>Blood Group</th><th>Units</th><th>Location</th><th>Status</th></tr></thead>
+        <tbody>${M.donations.filter(d=>d.donor_id==='u1').map(d=>`<tr>
+          <td>${fmtD(d.donation_date)}</td><td><strong>${d.blood_group}</strong></td><td>${d.units}</td>
+          <td style="color:var(--text3)">Delhi Blood Camp</td>
+          <td><span class="badge b-green">✅ Verified</span></td>
+        </tr>`).join('')||`<tr><td colspan="5">${empt('No donations yet')}</td></tr>`}</tbody>
+      </table></div>
+    </div>`;
+}
+
+function renderUserRequest(el){
+  el.innerHTML=`
+    <div class="g-2">
+      <div class="col">
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot" style="background:#0d9488"></span>Request Blood</div></div>
+          <div class="card-bd">
+            <form class="d-form" onsubmit="submitUserSOS(event)">
+              <div class="d-row">
+                <div class="form-group"><label class="form-label">Patient Name *</label><input type="text" class="form-input" id="ur-name" placeholder="Full name" required></div>
+                <div class="form-group"><label class="form-label">Blood Group *</label>
+                  <select class="form-select" id="ur-blood" required><option value="">Select</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>O+</option><option>O-</option><option>AB+</option><option>AB-</option></select></div>
+              </div>
+              <div class="d-row">
+                <div class="form-group"><label class="form-label">Units Needed *</label><input type="number" class="form-input" id="ur-units" min="1" placeholder="e.g. 2" required></div>
+                <div class="form-group"><label class="form-label">Urgency *</label>
+                  <select class="form-select" id="ur-urgency" required><option value="">Select</option><option value="critical">🔴 Critical</option><option value="high">🟠 High</option><option value="medium">🟡 Medium</option></select></div>
+              </div>
+              <div class="form-group"><label class="form-label">Hospital Name *</label><input type="text" class="form-input" id="ur-hospital" placeholder="Hospital name & city" required></div>
+              <div class="form-group"><label class="form-label">Contact Number *</label><input type="tel" class="form-input" id="ur-contact" placeholder="+91 9XXXXXXXXX" required></div>
+              <div class="form-group"><label class="form-label">Additional Notes</label><textarea class="form-input" id="ur-msg" rows="3" placeholder="Any additional details…"></textarea></div>
+              <button type="submit" class="btn btn-p btn-full" style="margin-top:4px">🆘 Send Blood Request</button>
+            </form>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot" style="background:#0d9488"></span>My Requests</div></div>
+          <div class="tbl-wrap"><table>
+            <thead><tr><th>Blood</th><th>Hospital</th><th>Units</th><th>Status</th></tr></thead>
+            <tbody>${M.sos_requests.slice(0,4).map(r=>`<tr>
+              <td><strong>${r.blood_group}</strong></td><td>${r.hospital_name}</td><td>${r.units}</td>
+              <td><span class="badge ${sta[r.status]||'b-gray'}">${r.status}</span></td>
+            </tr>`).join('')}</tbody>
+          </table></div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot" style="background:#0d9488"></span>Nearby Blood Banks</div></div>
+          <div class="card-bd" style="padding:0 18px">
+            ${M.blood_banks.map(b=>`
+              <div style="display:flex;gap:10px;padding:12px 0;border-bottom:1px solid var(--border)">
+                <div style="width:34px;height:34px;border-radius:8px;background:rgba(13,148,136,0.1);color:#2dd4bf;display:flex;align-items:center;justify-content:center;flex-shrink:0">🏥</div>
+                <div style="flex:1"><div style="font-size:13px;font-weight:600">${b.name}</div><div style="font-size:11px;color:var(--text3)">${b.address}</div></div>
+                <span style="font-size:11px;color:#2dd4bf;align-self:center">${b.phone}</span>
+              </div>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function submitUserSOS(e){
+  e.preventDefault();
+  const name=document.getElementById('ur-name').value;
+  const blood=document.getElementById('ur-blood').value;
+  const units=document.getElementById('ur-units').value;
+  const urgency=document.getElementById('ur-urgency').value;
+  const hospital=document.getElementById('ur-hospital').value;
+  const contact=document.getElementById('ur-contact').value;
+  if(!name||!blood||!units||!urgency||!hospital||!contact){toast('Fill all required fields','err');return;}
+  M.sos_requests.unshift({id:'s'+Date.now(),blood_group:blood,units:parseInt(units),urgency,hospital_name:hospital,contact,status:'active',created_at:new Date().toISOString()});
+  toast('🆘 Blood request sent! Matching donors...','succ');
+  e.target.reset();
+}
+
+function renderUserCamps(el){
+  el.innerHTML=`
+    <div class="g-2">
+      <div class="col">
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot" style="background:#0d9488"></span>Upcoming Blood Camps</div><span class="badge b-teal">${M.blood_camps.length} camps</span></div>
+          <div class="card-bd" style="display:flex;flex-direction:column;gap:10px">
+            ${M.blood_camps.map(c=>`
+              <div class="camp-c">
+                <div class="camp-name">${c.name}</div>
+                <div class="camp-meta">
+                  <span>📅 ${fmtD(c.date)}</span>
+                  <span>📍 ${c.city}</span>
+                  <span>⏰ ${c.start_time}–${c.end_time}</span>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <span style="font-size:11px;color:var(--text3)">${c.address}</span>
+                  <button class="btn btn-sm btn-p" onclick="toast('Registered for '+\`${c.name}\`,'succ')">Register</button>
+                </div>
+              </div>`).join('')}
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot" style="background:#0d9488"></span>Camp Locations</div></div>
+          <div class="card-bd" style="padding:0 18px 18px">
+            <div class="map-ph">
+              <img src="https://maps.googleapis.com/maps/api/staticmap?center=28.6139,77.2090&zoom=11&size=600x220&scale=2&style=element:all|color:0x0a0a0f&style=feature:road|element:geometry|color:0x1c1c28${M.blood_camps.map(c=>`&markers=color:0x0d9488|${c.lat},${c.lng}`).join('')}&key=AIzaSyBMbOyJ0Vn24OMA5R1-4zxwJvWa2oKTvIo" alt="Camp Map" style="width:100%;height:100%;object-fit:cover" onerror="this.parentNode.innerHTML='<span style=color:var(--text3);font-size:13px>Map unavailable</span>'">
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot" style="background:#0d9488"></span>My Registrations</div></div>
+          <div class="card-bd">${empt('Register for a camp to see it here')}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderUserBanks(el){
+  el.innerHTML=`
+    <div class="g-2">
+      <div class="col">
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot" style="background:#0d9488"></span>Nearby Blood Banks</div></div>
+          <div class="card-bd" style="display:flex;flex-direction:column;gap:10px">
+            ${M.blood_banks.map(b=>`
+              <div class="camp-c">
+                <div class="camp-name">🏥 ${b.name}</div>
+                <div class="camp-meta"><span>📍 ${b.address}</span></div>
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <span style="font-size:12px;color:#2dd4bf">${b.phone}</span>
+                  <button class="btn btn-sm btn-p" onclick="toast('Directions opening...','info')">Directions</button>
+                </div>
+              </div>`).join('')}
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot" style="background:#0d9488"></span>Blood Bank Map</div></div>
+          <div class="card-bd" style="padding:0 18px 18px">
+            <div class="map-ph">
+              <img src="https://maps.googleapis.com/maps/api/staticmap?center=28.58,77.21&zoom=12&size=600x260&scale=2&style=element:all|color:0x0a0a0f&style=feature:road|element:geometry|color:0x1c1c28${M.blood_banks.map(b=>`&markers=color:0x2563eb|${b.lat},${b.lng}`).join('')}&key=AIzaSyBMbOyJ0Vn24OMA5R1-4zxwJvWa2oKTvIo" alt="Banks Map" style="width:100%;height:100%;object-fit:cover" onerror="this.parentNode.innerHTML='<span style=color:var(--text3);font-size:13px>Map unavailable</span>'">
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><div class="card-title"><span class="card-dot" style="background:#0d9488"></span>Inventory at Nearest Bank</div></div>
+          <div class="card-bd">${bloodGrid(M.blood_inventory)}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ═══════════════════════════════════════════
+   CHARTS
+═══════════════════════════════════════════ */
+function mkChart(id,type,labels,data,color,isDoughnut=false){
+  const el=document.getElementById(id);if(!el)return;
+  if(charts[id]) try{charts[id].destroy();}catch(e){}
+  charts[id]=new Chart(el.getContext('2d'),{
+    type,
+    data:{
+      labels,
+      datasets:[{
+        label:'',data,
+        backgroundColor:isDoughnut
+          ?['#dc2626','#2563eb','#0d9488','#b45309','#7c3aed','#15803d','#f59e0b','#06b6d4'].map(c=>c+'88')
+          :color+'88',
+        borderColor:isDoughnut
+          ?['#dc2626','#2563eb','#0d9488','#b45309','#7c3aed','#15803d','#f59e0b','#06b6d4']
+          :color,
+        borderWidth:isDoughnut?2:1,
+        borderRadius:isDoughnut?0:5,
+        fill:type==='line',
+        tension:0.4,
+        pointRadius:3,pointHoverRadius:5,
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:isDoughnut,labels:{color:'#9090a8',font:{size:11},padding:12,boxWidth:10}}},
+      scales:isDoughnut?{}:{
+        x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#9090a8',font:{size:11}}},
+        y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#9090a8',font:{size:11}},beginAtZero:true},
+      }
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════ */
+function toast(msg,type='succ'){
+  const c=document.getElementById('toasts');
+  const t=document.createElement('div');
+  t.className=`toast ${type}`;
+  const ic={succ:'✅',err:'❌',info:'ℹ️'};
+  t.innerHTML=`<span>${ic[type]||'📢'}</span><span>${msg}</span>`;
+  c.appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(20px)';t.style.transition='0.3s';setTimeout(()=>t.remove(),300);},3200);
+}
+
+/* ═══════════════════════════════════════════
+   QUICK SOS
+═══════════════════════════════════════════ */
+function quickSOS(){
+  const portal=currentPortal;
+  if(portal==='hospital') switchTab('h-sos');
+  else if(portal==='user') switchTab('u-request');
+  else switchTab('sos');
+}
+
+/* ═══════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded',()=>{
+  showScreen('landing');
 });
 </script>
 </body>
