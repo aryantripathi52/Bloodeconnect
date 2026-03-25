@@ -6,10 +6,10 @@ import {
   Plus, ExternalLink
 } from 'lucide-react';
 import MapView from '../../../components/shared/MapView';
-import { clsx, type ClassValue } from 'clsx';
+import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-function cn(...inputs: ClassValue[]) {
+function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
