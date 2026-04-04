@@ -923,18 +923,7 @@
         if (error) throw error;
 
         closeModal('loginModal');
-        
-        // Hide landing page, show dashboard
-        document.getElementById('landing-page').style.display = 'none';
-        document.getElementById('dashboard').style.display = 'flex';
-        
-        // Setup Dashboard targeting the logged-in user
-        document.getElementById('sidebarRole').innerText = role;
-        document.getElementById('sidebarAvatar').innerText = panelsConfig[role].icon;
-        document.getElementById('sidebarUserName').innerText = data.user?.email || "User";
-        
-        renderSidebar(role);
-        renderDashboardContent(role, panelsConfig[role].menu[0]);
+        buildUserProfile(data.user, role);
       } catch (error) {
         btn.innerText = isRegisterMode ? 'Create Account & Register' : 'Access Dashboard';
         err.style.color = 'var(--emergency)';
@@ -943,10 +932,49 @@
       }
     }
 
-    function logout() {
+    function buildUserProfile(user, role) {
+      document.getElementById('landing-page').style.display = 'none';
+      document.getElementById('dashboard').style.display = 'flex';
+      
+      document.getElementById('sidebarRole').innerText = role;
+      document.getElementById('sidebarAvatar').innerText = panelsConfig[role] ? panelsConfig[role].icon : '👤';
+      
+      const emailName = user?.email ? user.email.split('@')[0] : "User";
+      document.getElementById('sidebarUserName').innerHTML = `${emailName} <span style="font-size:0.7em; background:var(--confirmed); color:white; padding:2px 6px; border-radius:4px; margin-left:4px;">Verified ✓</span>`;
+      
+      if(panelsConfig[role]) {
+        renderSidebar(role);
+        renderDashboardContent(role, panelsConfig[role].menu[0]);
+      }
+    }
+
+    async function logout() {
+      if (supabaseClient) {
+        await supabaseClient.auth.signOut();
+      }
       document.getElementById('landing-page').style.display = 'block';
       document.getElementById('dashboard').style.display = 'none';
+      document.getElementById('loginEmail').value = '';
+      document.getElementById('loginPassword').value = '';
     }
+
+    // Auth State Persistence (On Load)
+    window.addEventListener('load', async () => {
+      if (!supabaseClient) return;
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (session) {
+        // Modify panel cards to skip login modal entirely
+        const loginCards = document.querySelectorAll('.panel-card');
+        loginCards.forEach(card => {
+           card.onclick = (e) => {
+              e.preventDefault();
+              const role = card.querySelector('h3').innerText.replace(' Panel', '').trim();
+              buildUserProfile(session.user, role);
+           };
+        });
+        console.log("Active session restored!");
+      }
+    });
 
     function renderSidebar(role) {
       const menu = panelsConfig[role].menu;
